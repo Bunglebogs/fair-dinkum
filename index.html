@@ -1,0 +1,2446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fair Dinkum</title>
+<style>
+  :root {
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --panel-2: #e6eaee;
+    --line: #c9d2da;
+    --text: #111a22;
+    --muted: #56636f;
+    --ball: #d7f23a;       /* pickleball yellow, used as a fill behind dark text */
+    --ink: #3f5c00;        /* dark olive, for accent-coloured text on light backgrounds */
+    --side-a: #2563c9;
+    --side-b: #d45a12;
+    --danger: #c62828;
+    --ok: #1b8a4b;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { overflow: hidden; user-select: none; }
+  input, textarea, button, select { font: inherit; }
+  textarea, input { user-select: text; }
+  .hidden { display: none !important; }
+
+  /* ---------- Setup ---------- */
+  #setup { height: 100%; overflow: auto; padding: 28px 36px 40px; }
+  .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  .brand .dot { width: 34px; height: 34px; border-radius: 50%; background: var(--ball);
+    background-image: radial-gradient(circle at 30% 30%, #111a2255 3px, transparent 4px),
+      radial-gradient(circle at 70% 40%, #111a2255 3px, transparent 4px),
+      radial-gradient(circle at 45% 72%, #111a2255 3px, transparent 4px); }
+  .brand h1 { font-size: 26px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+  .brand .sub { color: var(--muted); font-size: 14px; margin-left: 4px; }
+  .grid { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 22px; max-width: 1200px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted);
+    margin: 0 0 12px; font-weight: 600; }
+  .card + .card { margin-top: 22px; }
+  .seg { display: flex; background: var(--bg); border-radius: 9px; padding: 4px; gap: 4px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 9px 6px;
+    border-radius: 7px; cursor: pointer; font-weight: 600; }
+  .seg button.on { background: var(--ball); color: #111; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.45; }
+  label.lbl { display: block; font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+  input[type=number], input[type=text], textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 9px 11px; outline: none; }
+  input:focus, textarea:focus { border-color: var(--ink); }
+  .courtrow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .courtrow span { color: var(--muted); width: 22px; text-align: right; font-size: 13px; }
+  .stepper { display: flex; gap: 8px; align-items: center; }
+  .stepper button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); font-size: 20px; cursor: pointer; }
+  .stepper input { width: 80px; text-align: center; font-size: 18px; }
+  textarea#players { min-height: 330px; resize: vertical; line-height: 1.5; font-size: 15px; }
+  .summary { margin-top: 12px; padding: 12px 14px; background: var(--bg); border-radius: 8px; font-size: 15px; }
+  .summary b { color: var(--ink); }
+  .errors { color: var(--danger); font-size: 14px; margin-top: 10px; line-height: 1.5; }
+  .actions { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+  .btn { border: 0; border-radius: 10px; padding: 14px 28px; font-size: 17px; font-weight: 700; cursor: pointer; }
+  .btn.primary { background: var(--ball); color: #111; }
+  .btn.primary:disabled { opacity: .4; cursor: default; }
+  .btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  .resume { max-width: 1200px; margin-bottom: 18px; display: flex; align-items: center; gap: 16px;
+    background: #e3f4e9; border: 1px solid #9fd3b3; border-radius: 12px; padding: 14px 18px; }
+  .resume .txt { flex: 1; }
+
+  /* ---------- Run ---------- */
+  #run { height: 100%; display: flex; flex-direction: column; padding: 1.6vh 1.6vw; gap: 1.4vh; }
+  .topbar { display: flex; align-items: baseline; gap: 2vw; }
+  .roundno { font-size: 6.2vh; font-weight: 800; line-height: 1; }
+  .roundno em { font-style: normal; color: var(--ink); }
+  .viewing { font-size: 2.2vh; background: #fff1d6; color: #7a4a00; border: 1px solid #e8c27a; padding: .5vh 1vw; border-radius: 8px; }
+  .keys { margin-left: auto; color: var(--muted); font-size: 1.7vh; display: flex; gap: 1.4vw; }
+  .keys kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 5px; padding: .1vh .6vw; font-family: inherit; color: var(--text); }
+  #courts { flex: 1; display: grid; gap: 1.4vh 1.2vw; min-height: 0; }
+  .court { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; box-shadow: 0 2px 10px #0000000f; display: flex;
+    flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+  .court .label { background: var(--ball); color: #111; font-weight: 800; text-align: center;
+    padding: 0 .5em; white-space: nowrap; overflow: hidden; flex: none; }
+  .court .body { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 1.2vh 1vw; gap: .6vh; }
+  .side { flex: 1; display: flex; align-items: stretch; gap: 1vw; border-radius: 10px;
+    padding: 0 1vw; min-height: 0; overflow: hidden; }
+  .side .nm { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+  .side.win { box-shadow: inset 0 0 0 4px var(--ok); }
+  #courts .score { flex: none; align-self: center; width: 2.3em; min-width: 0; text-align: center; font-weight: 800; border-radius: 10px;
+    background: #fff; color: var(--text); border: 3px solid var(--line); padding: .05em 0; outline: none; }
+  #courts .score:focus { border-color: var(--ink); }
+  #courts .score.bad { border-color: var(--danger); }
+  .side.a { background: color-mix(in srgb, var(--side-a) 13%, white); border-left: 8px solid var(--side-a); }
+  .side.b { background: color-mix(in srgb, var(--side-b) 13%, white); border-left: 8px solid var(--side-b); }
+  .name { font-weight: 700; line-height: 1.12; text-align: center; white-space: nowrap; }
+  .name + .name { margin-top: .3em; }
+  .vs { text-align: center; color: var(--muted); font-weight: 700; letter-spacing: 2px; }
+  .sitbar { background: var(--panel); border: 2px dashed var(--line); border-radius: 14px; padding: 1.2vh 1.4vw;
+    display: flex; align-items: center; gap: 1.4vw; min-height: 0; }
+  .sitbar .t { color: var(--muted); font-size: 2.4vh; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; white-space: nowrap; }
+  .sitbar .names { font-size: 3.6vh; font-weight: 700; line-height: 1.25; }
+  .sitbar .names { flex: 1; min-width: 0; }
+  .sitbar .names span { white-space: nowrap; display: inline-block; }
+  .sitbar .names span:not(:last-child)::after { content: "·"; color: var(--muted); margin: 0 .6em; }
+  .toast { position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); background: var(--danger);
+    color: #fff; padding: 1.2vh 2vw; border-radius: 10px; font-size: 2.2vh; font-weight: 700;
+    box-shadow: 0 6px 24px #0003; }
+
+  /* ---------- Edit overlay ---------- */
+  .overlay { position: fixed; inset: 0; background: #111a2299; display: flex; align-items: center; justify-content: center; }
+  .dialog { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(720px, 92vw);
+    max-height: 88vh; display: flex; flex-direction: column; }
+  .dialog header { padding: 18px 22px 8px; font-size: 20px; font-weight: 700; }
+  .dialog .sub { padding: 0 22px; color: var(--muted); font-size: 14px; }
+  .dialog .list { overflow: auto; padding: 14px 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+  .dialog .list label { display: flex; gap: 10px; align-items: center; padding: 6px 4px; font-size: 16px; cursor: pointer; }
+  .dialog .list input { width: 18px; height: 18px; accent-color: var(--ink); }
+  .dialog .add { padding: 6px 22px 0; display: flex; gap: 10px; }
+  .dialog footer { padding: 16px 22px 20px; display: flex; gap: 12px; justify-content: flex-end; align-items: center; }
+  .dialog footer .errors { margin: 0 auto 0 0; }
+  .check { display: flex; gap: 10px; align-items: center; margin-top: 14px; font-size: 15px; cursor: pointer; }
+  .check input { width: 18px; height: 18px; accent-color: var(--ink); }
+
+  /* ---------- Player picker / database ---------- */
+  .btn.sm { padding: 8px 14px; font-size: 14px; }
+  .dbline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted);
+    background: var(--bg); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+  .dbline.warn { background: #fff1d6; color: #7a4a00; border: 1px solid #e8c27a; }
+  .dbline.bad { background: #fde8e8; color: var(--danger); border: 1px solid #f2b8b8; }
+  .dbline .grow { flex: 1; min-width: 200px; }
+  .pickhead { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .linkbtn { background: none; border: 0; color: var(--side-a); cursor: pointer; font-size: 13px; padding: 2px 4px; text-decoration: underline; }
+  .ticklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 10px; max-height: 280px;
+    overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: var(--panel); }
+  .ticklist label { display: flex; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+  .ticklist label:hover { background: var(--panel-2); }
+  .ticklist label.on { font-weight: 600; }
+  .ticklist input { width: 17px; height: 17px; accent-color: var(--ink); }
+  .ticklist .empty { grid-column: 1 / -1; color: var(--muted); padding: 10px; font-size: 14px; }
+  .subh { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 14px; }
+  .chip.guest { border-style: dashed; }
+  .chip.pickable { cursor: pointer; padding-right: 12px; }
+  .chip.pickable:hover { border-color: var(--ink); }
+  .chip.picked { background: var(--ball); border-color: var(--ink); font-weight: 600; }
+  .chip button { border: 0; background: transparent; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 4px; }
+  .chip button:hover { color: var(--danger); }
+  .none { color: var(--muted); font-size: 14px; }
+  .addrow { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .addrow input[type=text] { flex: 1; min-width: 160px; width: auto; }
+  .addrow label { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+
+  /* ---------- Manage screen ---------- */
+  #manage { height: 100%; overflow: auto; padding: 28px 36px 40px; }
+  #manage .brand .btn { margin-left: auto; }
+  .mgrid .card { margin-top: 0; }
+  .mgrid { display: grid; align-items: start; grid-template-columns: 1fr 1fr; gap: 22px; max-width: 1200px; }
+  @media (max-width: 860px) { .mgrid { grid-template-columns: 1fr; } }
+  .mtools { max-width: 1200px; margin-bottom: 22px; }
+  .mtools .dbline { margin-bottom: 0; }
+  .rows { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; max-height: 480px; overflow: auto; }
+  .prow { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  .prow:last-child { border-bottom: 0; }
+  .prow .n { flex: 1; min-width: 0; font-size: 15px; }
+  .prow .n small { color: var(--muted); display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prow input[type=text] { flex: 1; width: auto; padding: 5px 8px; }
+  .prow.group { cursor: pointer; }
+  .prow.group:hover { background: var(--panel-2); }
+  .prow.group.sel { background: color-mix(in srgb, var(--ball) 40%, white); }
+  .ibtn { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 6px; padding: 4px 10px;
+    cursor: pointer; font-size: 13px; }
+  .ibtn:hover { border-color: var(--ink); }
+  .ibtn.del:hover { border-color: var(--danger); color: var(--danger); }
+  .search { margin-top: 10px; }
+  .prow.tall { align-items: flex-start; }
+  .prow .n .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; align-items: center; }
+  .tag { display: inline-flex; align-items: center; gap: 2px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 1px 4px 1px 10px; font-size: 13px; }
+  .tag.grp { background: color-mix(in srgb, var(--ball) 35%, white); border-color: #b9cc4a; }
+  .tag button { border: 0; background: transparent; cursor: pointer; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 4px; }
+  .tag button:hover { color: var(--danger); }
+  .tag.add { background: transparent; border-style: dashed; cursor: pointer; padding: 1px 10px; color: var(--side-a); }
+  .tag.add:hover { border-color: var(--side-a); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .gcard { border-bottom: 1px solid var(--line); padding: 10px 12px; }
+  .gcard:last-child { border-bottom: 0; }
+  .gcard .ghead { display: flex; align-items: center; gap: 8px; }
+  .gcard .ghead .gn { flex: 1; font-weight: 700; font-size: 15px; }
+  .gcard .ghead .gn small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .gcard .ghead input[type=text] { flex: 1; width: auto; padding: 5px 8px; }
+  .gcard .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  #groupDialog .list label { font-size: 17px; }
+  #xlList .xn { padding: 4px 6px; font-size: 15px; display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  #xlList .xn input { width: 17px; height: 17px; accent-color: var(--ink); }
+  #xlList .xn.dup { color: var(--muted); }
+  #xlList .xn.dup::after { content: " — already on list"; font-size: 12px; }
+  #xlList .xn.skip { color: var(--muted); text-decoration: line-through; }
+  .dialog .add .btn { white-space: nowrap; }
+  .cardhead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .cardhead h2 { margin: 0 !important; }
+  .cardhead .ibtn { margin-left: auto; }
+  .ibtn:disabled { opacity: .4; cursor: default; }
+  .glink { flex: 1; min-width: 0; background: none; border: 0; text-align: left; cursor: pointer; padding: 2px 0;
+    font: inherit; font-size: 15px; font-weight: 700; color: var(--side-a); }
+  .glink:hover span.t { text-decoration: underline; }
+  .glink small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .glink .chev { color: var(--muted); margin-left: 4px; }
+  .backlink { font-size: 14px; padding: 0; text-decoration: none; }
+  .backlink:hover { text-decoration: underline; }
+  .gphead { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 2px; }
+  .gphead h3 { margin: 0; font-size: 22px; }
+
+  /* ---------- Scheduled sessions ---------- */
+  .sched { max-width: 1200px; margin-bottom: 22px; }
+  .schedhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .schedhead .btn { margin-left: auto; }
+  #schedList { margin-top: 10px; }
+  .srow { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .srow .si { flex: 1; min-width: 220px; }
+  .srow .sn { font-weight: 700; font-size: 16px; }
+  .srow .sw { font-size: 14px; color: var(--ink); font-weight: 600; }
+  .srow .sd { font-size: 13px; color: var(--muted); }
+  .srow .past { color: var(--danger); font-weight: 600; }
+  .srow.live { background: color-mix(in srgb, var(--ok) 10%, white); }
+  .editbar { max-width: 1200px; margin-bottom: 22px; background: #eef4ff; border: 2px solid var(--side-a); border-radius: 12px; padding: 16px 20px; }
+  .ebtitle { font-weight: 800; font-size: 18px; color: var(--side-a); margin-bottom: 10px; }
+  .ebfields { display: flex; gap: 14px; flex-wrap: wrap; }
+  .ebfields label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .ebfields label:first-child { flex: 1; min-width: 220px; }
+  .ebfields input { font-size: 16px; }
+  .ebhint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .ebactions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  .ebactions .errors { margin: 0 auto 0 0; }
+  body.editing #schedCard, body.editing #resumeBox, body.editing #startActions { display: none !important; }
+  .runname { font-size: 2.6vh; color: var(--muted); font-weight: 600; align-self: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+
+  /* ---------- Touch devices ---------- */
+  body:not(.touch) .touchonly { display: none !important; }
+  body.touch .keysonly { display: none !important; }
+  .touchbar { display: flex; gap: 1.2vw; }
+  .tb { flex: 1; min-height: 56px; font: inherit; font-size: clamp(16px, 2.4vh, 26px); font-weight: 700; border-radius: 12px;
+    border: 2px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; touch-action: manipulation; }
+  .tb:active { background: var(--panel-2); }
+  .tb.next { flex: 2; background: var(--ball); border-color: #b9cc4a; color: #111; }
+  .tb:disabled { opacity: .4; }
+  body.touch .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 140px); max-width: 90vw; }
+  @media (max-width: 600px) {
+    #setup, #manage { padding: 16px 14px 30px; }
+    .brand h1 { font-size: 22px; }
+    .card { padding: 14px; }
+    .touchbar { flex-wrap: wrap; gap: 8px; padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .tb { font-size: 16px; padding: 0 4px; }
+    .tb.small { flex: 1 1 28%; order: 1; min-height: 44px; font-size: 15px; }
+    #tbPrev { flex: 1 1 30%; order: 2; }
+    .tb.next { flex: 2 1 60%; order: 3; }
+    #board > div:first-child { flex-wrap: wrap; }
+    #board h1 { font-size: 34px; }
+    .roundno { font-size: 40px; }
+    .sitbar .t { font-size: 13px; }
+  }
+
+  /* ---------- Leaderboard ---------- */
+  #board { position: fixed; inset: 0; background: var(--bg); padding: 2.4vh 2.4vw; display: flex; flex-direction: column; gap: 1.6vh; }
+  #board h1 { margin: 0; font-size: 5.6vh; line-height: 1; }
+  #board h1 em { font-style: normal; color: var(--ink); }
+  #board .sub { color: var(--muted); font-size: 2vh; }
+  #boardCols { flex: 1; display: flex; gap: 2.4vw; min-height: 0; align-items: flex-start; }
+  #boardCols table { flex: 1; border-collapse: collapse; }
+  #boardCols th { color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: .55em;
+    text-align: right; padding: 0 .6em .4em; border-bottom: 2px solid var(--line); }
+  #boardCols td { padding: .22em .6em; text-align: right; font-weight: 700; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  #boardCols th.l, #boardCols td.l { text-align: left; }
+  #boardCols td.rank { color: var(--ink); width: 2.2em; }
+  #boardCols td.w { color: var(--ink); }
+  #boardCols tr.gone td { color: var(--muted); }
+  #boardCols td.pos { color: var(--ok); } #boardCols td.neg { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- ================= SETUP ================= -->
+<div id="setup">
+  <div class="brand"><div class="dot"></div><h1>Fair Dinkum</h1></div>
+
+  <div id="resumeBox" class="resume hidden">
+    <div class="txt"><b id="resumeTitle">Session in progress</b> — <span id="resumeInfo"></span></div>
+    <button class="btn secondary" id="finishBtn">Finish session</button>
+    <button class="btn primary" id="resumeBtn">Resume session</button>
+  </div>
+
+  <div id="schedCard" class="card sched">
+    <div class="schedhead">
+      <h2 style="margin:0">Scheduled sessions</h2>
+      <button class="btn secondary sm" id="schedNew">+ Schedule a session</button>
+    </div>
+    <div id="schedList"></div>
+  </div>
+
+  <div id="editBar" class="editbar hidden">
+    <div class="ebtitle" id="ebTitle">New scheduled session</div>
+    <div class="ebfields">
+      <label>Name <input type="text" id="ebName" placeholder="e.g. Improvers Group Play"></label>
+      <label>Date &amp; time <input type="datetime-local" id="ebWhen"></label>
+    </div>
+    <div class="ebhint">Set the format, courts and players below, then save. You can come back and change anything later.</div>
+    <div class="ebactions">
+      <span class="errors" id="ebErrors"></span>
+      <button class="btn secondary" id="ebCancel">Cancel</button>
+      <button class="btn primary" id="ebSave">Save session</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Format</h2>
+        <div class="seg" id="modeSeg">
+          <button data-mode="doubles">Doubles</button>
+          <button data-mode="singles">Singles</button>
+          <button data-mode="teams">Teams</button>
+        </div>
+        <div class="hint" id="modeHint"></div>
+        <label class="check"><input type="checkbox" id="keepScore"> Keep score</label>
+        <div class="hint">Enter each court's score before moving to the next round. <b class="keysonly">F1</b><span class="keysonly"> or </span><b class="keysonly">L</b><span class="keysonly"> shows</span><span class="touchonly">The Leaderboard button shows</span> the leaderboard.</div>
+        <label class="check"><input type="checkbox" id="touchBtns"> On-screen buttons during the session</label>
+        <div class="hint" id="touchHint"></div>
+      </div>
+      <div class="card">
+        <h2>Courts</h2>
+        <div class="stepper">
+          <button id="courtMinus" title="Fewer courts">−</button>
+          <input type="number" id="courtCount" min="1" max="30" value="3">
+          <button id="courtPlus" title="More courts">+</button>
+        </div>
+        <div id="courtLabels" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Who's playing</h2>
+      <div class="dbline" id="dbStatus"></div>
+      <div class="pickhead">
+        <select id="groupPick" title="Show players from"></select>
+        <button class="linkbtn" id="tickAll">Tick all</button>
+        <button class="linkbtn" id="untickAll">Untick all</button>
+        <button class="btn secondary sm" id="openManage" style="margin-left:auto">Players &amp; groups…</button>
+      </div>
+      <div class="ticklist" id="tickList"></div>
+      <div class="addrow">
+        <input type="text" id="guestName" placeholder="Add someone not on the list">
+        <label><input type="checkbox" id="guestSave" checked> Save to player list</label>
+        <button class="btn secondary sm" id="guestAdd">Add</button>
+      </div>
+      <div class="subh" id="todayTitle">Playing today</div>
+      <div class="chips" id="todayChips"></div>
+      <div id="pairArea" class="hidden">
+        <div class="subh">Pairs</div>
+        <div class="hint" style="margin:0 0 8px">Click one player, then their partner, to make a pair. Click × on a pair to split it.</div>
+        <div class="chips" id="pairChips"></div>
+        <div class="subh" id="unpairedTitle">Not yet paired</div>
+        <div class="chips" id="unpairedChips"></div>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="errors" id="errors"></div>
+      <div class="actions" id="startActions">
+        <button class="btn primary" id="startBtn">Start session</button>
+        <span class="hint touchonly" style="margin:0">Starts full screen. Use the buttons along the bottom to move between rounds.</span>
+        <span class="hint keysonly" style="margin:0">Starts full screen. <b>Space</b> next round · <b>Backspace</b> previous · <b>E</b> edit players · <b>F1</b>/<b>L</b> leaderboard · <b>Esc</b> leave</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PLAYERS & GROUPS ================= -->
+<div id="manage" class="hidden">
+  <div class="brand"><div class="dot"></div><h1>Players &amp; groups</h1>
+    <button class="btn primary sm" id="manageDone">Done</button></div>
+  <div class="mtools">
+    <div class="dbline" id="dbStatus2"></div>
+    <div class="addrow" style="margin-top:8px">
+      <button class="btn secondary sm" id="chooseFolder2">Change database folder…</button>
+      <button class="btn secondary sm" id="exportDb">Export backup…</button>
+      <button class="btn secondary sm" id="importDb">Import backup…</button>
+      <button class="btn secondary sm" id="importNames">Import names from Excel…</button>
+      <input type="file" id="namesFile" accept=".xlsx,.csv,.txt" class="hidden">
+      <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+    </div>
+  </div>
+  <div class="mgrid">
+    <div class="card">
+      <div class="cardhead"><h2>Players <span id="pCount"></span></h2>
+        <button class="ibtn del" id="delAllPlayers">Delete all players</button></div>
+      <div class="addrow"><input type="text" id="newPlayer" placeholder="New player name"><button class="btn secondary sm" id="addPlayer">Add</button></div>
+      <input type="text" id="pSearch" class="search" placeholder="Search players">
+      <div class="rows" id="pList"></div>
+    </div>
+    <div class="card">
+      <div id="groupsMain">
+        <div class="cardhead"><h2>Groups <span id="gCount"></span></h2>
+          <button class="ibtn del" id="delAllGroups">Delete all groups</button></div>
+        <div class="addrow"><input type="text" id="newGroup" placeholder="New group name"><button class="btn secondary sm" id="addGroup">Add</button></div>
+        <div class="rows" id="gList"></div>
+      </div>
+      <div id="groupPage" class="hidden">
+        <button class="linkbtn backlink" id="gpBack">← All groups</button>
+        <div class="gphead"><h3 id="gpName"></h3><span class="muted" id="gpCount"></span></div>
+        <div class="addrow">
+          <input type="text" id="gpAddName" list="gpNames" placeholder="Add a player — pick from the list or type a new name">
+          <datalist id="gpNames"></datalist>
+          <button class="btn secondary sm" id="gpAdd">Add</button>
+        </div>
+        <div class="rows" id="gpList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CHOOSE GROUPS FOR A PLAYER ================= -->
+<div id="groupDialog" class="overlay hidden">
+  <div class="dialog" style="width:min(560px,92vw)">
+    <header id="gdTitle">Groups</header>
+    <div class="sub">Tick every group this player belongs to.</div>
+    <div class="list" id="gdList"></div>
+    <div class="add">
+      <input type="text" id="gdNew" placeholder="New group name">
+      <button class="btn secondary sm" id="gdAdd">Add group</button>
+    </div>
+    <footer><button class="btn primary" id="gdDone">Done</button></footer>
+  </div>
+</div>
+
+<!-- ================= IMPORT NAMES ================= -->
+<div id="xlDialog" class="overlay hidden">
+  <div class="dialog" style="width:min(640px,94vw)">
+    <header>Import player names</header>
+    <div class="sub"><span id="xlSource"></span> Untick anything that isn't a player.</div>
+    <div style="padding:10px 22px 0">
+      <label class="check" style="margin-top:0"><input type="checkbox" id="xlHeading"> <span>First row is a heading (<span id="xlFirst"></span>) — don't import it</span></label>
+      <div class="pickhead" style="margin-top:12px">
+        <span style="font-size:14px">Also add them to group:</span>
+        <select id="xlGroup"></select>
+        <input type="text" id="xlNewGroup" placeholder="New group name" class="hidden" style="flex:1;width:auto">
+      </div>
+      <div class="muted" id="xlSummary" style="margin-top:6px"></div>
+    </div>
+    <div class="list" id="xlList" style="max-height:40vh"></div>
+    <footer>
+      <div class="errors" id="xlErrors"></div>
+      <button class="btn secondary" id="xlCancel">Cancel</button>
+      <button class="btn primary" id="xlGo">Import</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= RUN ================= -->
+<div id="run" class="hidden">
+  <div class="topbar">
+    <div class="roundno">Round <em id="roundNo">1</em></div>
+    <div class="runname" id="runName"></div>
+    <div class="viewing hidden" id="viewing"></div>
+    <div class="keys keysonly">
+      <span><kbd>Space</kbd> next</span>
+      <span><kbd>Backspace</kbd> back</span>
+      <span><kbd>E</kbd> players</span>
+      <span class="scoreonly"><kbd>F1</kbd>/<kbd>L</kbd> leaderboard</span>
+      <span><kbd>Esc</kbd> leave</span>
+    </div>
+  </div>
+  <div id="courts"></div>
+  <div class="sitbar" id="sitbar"><div class="t">Sitting out</div><div class="names" id="sitNames"></div></div>
+  <div class="touchbar touchonly">
+    <button class="tb" id="tbPrev">‹ Back</button>
+    <button class="tb small" id="tbPlayers">Players</button>
+    <button class="tb small scoreonly" id="tbBoard">Leaderboard</button>
+    <button class="tb small" id="tbEnd">End</button>
+    <button class="tb next" id="tbNext">Next round ›</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<!-- ================= LEADERBOARD ================= -->
+<div id="board" class="hidden">
+  <div style="display:flex;align-items:baseline;gap:2vw">
+    <h1>Leader<em>board</em></h1>
+    <div class="sub" id="boardSub"></div>
+    <div class="sub" style="margin-left:auto">Ranked by wins, then points margin<span class="keysonly"> · <b>F1</b>, <b>L</b> or <b>Esc</b> to close</span></div>
+  </div>
+  <div id="boardCols"></div>
+  <div class="touchonly" style="text-align:center"><button class="tb next" id="tbBoardClose" style="min-width:40vw">Close</button></div>
+</div>
+
+<!-- ================= EDIT PLAYERS (mid-session) ================= -->
+<div id="editOverlay" class="overlay hidden">
+  <div class="dialog">
+    <header id="editTitle">Players in this session</header>
+    <div class="sub">Untick anyone who has left; add late arrivals below. Changes apply from the next new round — rounds already shown are not changed.</div>
+    <div class="list" id="editList"></div>
+    <div class="add">
+      <input type="text" id="addName" placeholder="Add a player" list="dbNames">
+      <datalist id="dbNames"></datalist>
+      <button class="btn secondary" id="addBtn" style="padding:9px 18px">Add</button>
+    </div>
+    <footer>
+      <div class="errors" id="editErrors"></div>
+      <button class="btn secondary" id="editCancel">Cancel</button>
+      <button class="btn primary" id="editApply">Apply</button>
+    </footer>
+  </div>
+</div>
+
+<script>// Pickleball rotation engine.
+// Modes:
+//   "doubles" - individual players, partners rotate, 4 per court
+//   "singles" - individual players, 1 v 1, 2 per court
+//   "teams"   - fixed pairs (a "unit" is a pair), pair v pair, 2 units per court
+// Rounds are generated one at a time from the full history, so roster changes
+// between rounds are handled naturally.
+
+(function (root) {
+  "use strict";
+
+  var W = {
+    partner: 100,        // per (count^2) of previous partnerships
+    partnerRecent: 60,   // partnered in the previous round
+    opponent: 20,        // per (count^2) of previous opposing
+    opponentRecent: 12,  // opposed in the previous round
+    court: 2,            // per previous visit to this court
+    courtRecent: 3       // same court as previous round
+  };
+
+  function unitsPerCourt(mode) { return mode === "doubles" ? 4 : 2; }
+
+  function key(a, b) { return a < b ? a + "|" + b : b + "|" + a; }
+
+  function createSession(opts) {
+    var s = {
+      mode: opts.mode,
+      courts: opts.courts.slice(),
+      units: {},       // id -> unit state
+      order: [],       // ids in entry order
+      partner: {}, partnerLast: {},
+      opponent: {}, opponentLast: {},
+      rounds: [],
+      nextId: 1,
+      rng: opts.rng || Math.random
+    };
+    (opts.units || []).forEach(function (u) { addUnit(s, u); });
+    return s;
+  }
+
+  function addUnit(s, u) {
+    var id = "u" + (s.nextId++);
+    s.units[id] = {
+      id: id,
+      name: u.name,
+      members: u.members || null,   // teams mode: [name1, name2]
+      active: true,
+      sitOuts: 0,
+      expected: 0,     // sit-outs this unit "should" have had while present
+      played: 0,
+      lastSat: -99,
+      courtCount: {},
+      lastCourt: null
+    };
+    s.order.push(id);
+    return id;
+  }
+
+  function removeUnit(s, id) { if (s.units[id]) s.units[id].active = false; }
+  function restoreUnit(s, id) { if (s.units[id]) s.units[id].active = true; }
+
+  function activeIds(s) {
+    return s.order.filter(function (id) { return s.units[id].active; });
+  }
+
+  function capacity(s, nActive) {
+    var per = unitsPerCourt(s.mode);
+    var courtsUsed = Math.min(s.courts.length, Math.floor(nActive / per));
+    return { courtsUsed: courtsUsed, playing: courtsUsed * per, per: per };
+  }
+
+  function shuffle(a, rng) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // Pick who sits out: those most "owed" a sit-out relative to their fair share.
+  function chooseSitters(s, ids, nSit, r) {
+    if (nSit <= 0) return [];
+    var rng = s.rng;
+    var scored = ids.map(function (id) {
+      var u = s.units[id];
+      return {
+        id: id,
+        owed: u.expected - u.sitOuts,
+        satLast: u.lastSat === r - 1 ? 1 : 0,
+        rand: rng()
+      };
+    });
+    scored.sort(function (a, b) {
+      var d = b.owed - a.owed;
+      if (Math.abs(d) > 1e-9) return d;
+      if (a.satLast !== b.satLast) return a.satLast - b.satLast;
+      return a.rand - b.rand;
+    });
+    return scored.slice(0, nSit).map(function (x) { return x.id; });
+  }
+
+  function pairCost(map, lastMap, a, b, w, wRecent, r) {
+    var k = key(a, b);
+    var c = map[k] || 0;
+    return w * c * c + (lastMap[k] === r - 1 ? wRecent : 0);
+  }
+
+  function courtCost(s, ids, courtIdx) {
+    var cost = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var u = s.units[ids[i]];
+      cost += W.court * (u.courtCount[courtIdx] || 0);
+      if (u.lastCourt === courtIdx) cost += W.courtRecent;
+    }
+    return cost;
+  }
+
+  function matchCost(s, slots, m, per, r) {
+    var b = m * per;
+    if (s.mode === "doubles") {
+      var a0 = slots[b], a1 = slots[b + 1], b0 = slots[b + 2], b1 = slots[b + 3];
+      var c = pairCost(s.partner, s.partnerLast, a0, a1, W.partner, W.partnerRecent, r) +
+              pairCost(s.partner, s.partnerLast, b0, b1, W.partner, W.partnerRecent, r);
+      c += pairCost(s.opponent, s.opponentLast, a0, b0, W.opponent, W.opponentRecent, r);
+      c += pairCost(s.opponent, s.opponentLast, a0, b1, W.opponent, W.opponentRecent, r);
+      c += pairCost(s.opponent, s.opponentLast, a1, b0, W.opponent, W.opponentRecent, r);
+      c += pairCost(s.opponent, s.opponentLast, a1, b1, W.opponent, W.opponentRecent, r);
+      return c + courtCost(s, [a0, a1, b0, b1], m);
+    }
+    var x = slots[b], y = slots[b + 1];
+    return pairCost(s.opponent, s.opponentLast, x, y, W.opponent, W.opponentRecent, r) +
+           courtCost(s, [x, y], m);
+  }
+
+  // Randomised restarts + pairwise-swap hill climbing.
+  function arrange(s, players, courtsUsed, per, r) {
+    var best = null, bestCost = Infinity;
+    var restarts = players.length > 40 ? 12 : 25;
+    for (var t = 0; t < restarts; t++) {
+      var slots = shuffle(players.slice(), s.rng);
+      var mc = [];
+      var total = 0;
+      for (var m = 0; m < courtsUsed; m++) { mc[m] = matchCost(s, slots, m, per, r); total += mc[m]; }
+      var improved = true;
+      while (improved) {
+        improved = false;
+        for (var i = 0; i < slots.length; i++) {
+          for (var j = i + 1; j < slots.length; j++) {
+            var mi = Math.floor(i / per), mj = Math.floor(j / per);
+            // swapping two sides of one singles/teams match changes nothing useful
+            if (mi === mj && per === 2) continue;
+            var tmp = slots[i]; slots[i] = slots[j]; slots[j] = tmp;
+            var ni = matchCost(s, slots, mi, per, r);
+            var nj = mi === mj ? ni : matchCost(s, slots, mj, per, r);
+            var before = mi === mj ? mc[mi] : mc[mi] + mc[mj];
+            var after = mi === mj ? ni : ni + nj;
+            if (after < before - 1e-9) {
+              mc[mi] = ni; mc[mj] = nj; total += after - before; improved = true;
+            } else {
+              tmp = slots[i]; slots[i] = slots[j]; slots[j] = tmp;
+            }
+          }
+        }
+      }
+      if (total < bestCost) { bestCost = total; best = slots.slice(); }
+      if (bestCost === 0) break;
+    }
+    return best;
+  }
+
+  function record(s, round) {
+    var r = round.index;
+    var present = round.matches.length * unitsPerCourt(s.mode) + round.sitting.length;
+    var share = present ? round.sitting.length / present : 0;
+    round.matches.forEach(function (mt) {
+      mt.sideA.concat(mt.sideB).forEach(function (id) {
+        var u = s.units[id];
+        u.played++; u.expected += share;
+        u.courtCount[mt.court] = (u.courtCount[mt.court] || 0) + 1;
+        u.lastCourt = mt.court;
+      });
+      if (s.mode === "doubles") {
+        [mt.sideA, mt.sideB].forEach(function (side) {
+          var k = key(side[0], side[1]);
+          s.partner[k] = (s.partner[k] || 0) + 1; s.partnerLast[k] = r;
+        });
+      }
+      mt.sideA.forEach(function (a) {
+        mt.sideB.forEach(function (b) {
+          var k = key(a, b);
+          s.opponent[k] = (s.opponent[k] || 0) + 1; s.opponentLast[k] = r;
+        });
+      });
+    });
+    round.sitting.forEach(function (id) {
+      var u = s.units[id];
+      u.sitOuts++; u.expected += share; u.lastSat = r;
+      u.lastCourt = null;
+    });
+  }
+
+  // Generate, record and return the next round. Returns null if not enough players.
+  function nextRound(s) {
+    var r = s.rounds.length;
+    var ids = activeIds(s);
+    var cap = capacity(s, ids.length);
+    if (cap.courtsUsed === 0) return null;
+    var sitters = chooseSitters(s, ids, ids.length - cap.playing, r);
+    var sitSet = {};
+    sitters.forEach(function (id) { sitSet[id] = true; });
+    var players = ids.filter(function (id) { return !sitSet[id]; });
+    var slots = arrange(s, players, cap.courtsUsed, cap.per, r);
+    var matches = [];
+    var half = cap.per / 2;
+    for (var m = 0; m < cap.courtsUsed; m++) {
+      var b = m * cap.per;
+      matches.push({
+        court: m,
+        sideA: slots.slice(b, b + half),
+        sideB: slots.slice(b + half, b + cap.per)
+      });
+    }
+    var round = {
+      index: r,
+      matches: matches,
+      // keep entry order for a stable, readable list
+      sitting: ids.filter(function (id) { return sitSet[id]; })
+    };
+    record(s, round);
+    s.rounds.push(round);
+    return round;
+  }
+
+  var api = {
+    createSession: createSession, addUnit: addUnit, removeUnit: removeUnit,
+    restoreUnit: restoreUnit, nextRound: nextRound, activeIds: activeIds,
+    capacity: capacity, unitsPerCourt: unitsPerCourt, key: key
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.PBEngine = api;
+})(this);
+</script>
+<script>
+(function () {
+  "use strict";
+  var E = window.PBEngine;
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- host bridge ----------
+  // In the Windows exe these are provided by the Go host. In a plain browser we
+  // fall back to localStorage for settings and the Fullscreen API.
+  var inExe = typeof window.saveSettings === "function";
+  var LS_KEY = "pickleballRotator.settings";
+  function hostSave(txt) {
+    if (inExe) { try { return Promise.resolve(window.saveSettings(txt)); } catch (e) { return Promise.resolve(null); } }
+    try { localStorage.setItem(LS_KEY, txt); } catch (e) {}
+    return Promise.resolve(null);
+  }
+  function hostLoad() {
+    if (inExe) { try { return Promise.resolve(window.loadSettings()); } catch (e) { return Promise.resolve(null); } }
+    try { return Promise.resolve(localStorage.getItem(LS_KEY)); } catch (e) { return Promise.resolve(null); }
+  }
+  var wantFull = false;
+  function hostFull(on) {
+    if (inExe) { try { window.setFullscreen(on); } catch (e) {} return; }
+    wantFull = on;
+    try {
+      if (on && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(function () {
+          // Ask Chrome/Edge to pass Esc to the page instead of leaving full screen.
+          if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(["Escape", "F1"]).catch(function () {});
+        }).catch(function () {});
+      } else if (!on && document.fullscreenElement) {
+        if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+        document.exitFullscreen().catch(function () {});
+      }
+    } catch (e) {}
+  }
+  // If the browser leaves full screen by itself (e.g. Esc wasn't passed to us),
+  // treat it like Esc: close whatever is open, or leave the session.
+  document.addEventListener("fullscreenchange", function () {
+    if (inExe || document.fullscreenElement || !wantFull) return;
+    wantFull = false;
+    if ($("run").classList.contains("hidden")) return;
+    if (!$("editOverlay").classList.contains("hidden")) { closeEdit(); return; }
+    if (!$("board").classList.contains("hidden")) { closeBoard(); return; }
+    leaveRun();
+  });
+
+  // ---------- state ----------
+  var settings = { mode: "doubles", keepScore: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
+  var session = null;   // engine session
+  var view = 0;         // index of round being shown
+
+  var MODE_HINT = {
+    doubles: "2 v 2. Partners and opponents rotate every round.",
+    singles: "1 v 1. Opponents rotate every round.",
+    teams: "Fixed pairs play 2 v 2. The same two people stay together all session; opponents rotate."
+  };
+
+  // ---------- setup screen ----------
+  function courtLabel(i) {
+    var l = (settings.courtLabels[i] || "").trim();
+    return l || ("Court " + (i + 1));
+  }
+
+  // Adds/removes label rows as needed (rather than rebuilding), so a click into a label box
+  // isn't lost when the court count changes at the same moment.
+  function renderCourtLabels() {
+    var n = settings.courtCount, box = $("courtLabels");
+    while (box.children.length > n) box.removeChild(box.lastChild);
+    Array.prototype.forEach.call(box.querySelectorAll("input"), function (inp, i) {
+      if (document.activeElement !== inp) inp.value = settings.courtLabels[i] || "";
+    });
+    for (var i = box.children.length; i < n; i++) {
+      var row = document.createElement("div");
+      row.className = "courtrow";
+      var sp = document.createElement("span"); sp.textContent = i + 1;
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.placeholder = "Court " + (i + 1);
+      inp.value = settings.courtLabels[i] || "";
+      inp.dataset.i = i;
+      inp.addEventListener("input", function (e) {
+        settings.courtLabels[+e.target.dataset.i] = e.target.value; persist();
+      });
+      row.appendChild(sp); row.appendChild(inp); box.appendChild(row);
+    }
+  }
+
+  function setCourtCount(n) {
+    n = Math.max(1, Math.min(30, parseInt(n, 10) || 1));
+    settings.courtCount = n; $("courtCount").value = n;
+    renderCourtLabels(); validate(); persist();
+  }
+
+  function setMode(m) {
+    settings.mode = m;
+    Array.prototype.forEach.call($("modeSeg").children, function (b) { b.classList.toggle("on", b.dataset.mode === m); });
+    $("modeHint").textContent = MODE_HINT[m];
+    renderPicker(); persist();
+  }
+
+  function describeCapacity(nUnits, courts, mode) {
+    var per = E.unitsPerCourt(mode);
+    var used = Math.min(courts, Math.floor(nUnits / per));
+    var playing = used * per, sitting = nUnits - playing;
+    var noun = mode === "teams" ? "team" : "player";
+    var pl = function (n, w) { return n + " " + w + (n === 1 ? "" : "s"); };
+    if (used === 0) return { ok: false, html: "Need at least <b>" + per + "</b> " + noun + "s for one court." };
+    var html = "<b>" + pl(nUnits, noun) + "</b> on <b>" + pl(courts, "court") + "</b> → " +
+      "<b>" + playing + "</b> playing, <b>" + sitting + "</b> sitting out each round";
+    if (used < courts) html += "<br><span style='color:var(--muted)'>Only " + pl(used, "court") +
+      " can be filled; the first " + used + " will be used.</span>";
+    return { ok: true, html: html };
+  }
+
+  // Build the session's units from the ticked players (and pairs in Teams mode).
+  function validate() {
+    var keys = selectedKeys(), errors = [], units = [];
+    if (settings.mode === "teams") {
+      var paired = {};
+      sel.pairs.forEach(function (pr) {
+        paired[pr[0]] = paired[pr[1]] = true;
+        var a = nameOf(pr[0]), b = nameOf(pr[1]);
+        units.push({ name: a + " & " + b, members: [a, b] });
+      });
+      var loose = keys.filter(function (k) { return !paired[k]; });
+      if (loose.length) errors.push(loose.length === 1 ? "1 ticked player isn't in a pair yet." :
+        loose.length + " ticked players aren't in a pair yet.");
+    } else {
+      units = keys.map(function (k) { return { name: nameOf(k) }; });
+    }
+    var cap = describeCapacity(units.length, settings.courtCount, settings.mode);
+    $("summary").innerHTML = cap.html;
+    $("errors").innerHTML = errors.map(esc).join("<br>");
+    var ok = cap.ok && !errors.length;
+    $("startBtn").disabled = !ok;
+    return ok ? units : null;
+  }
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+  var persistTimer = null;
+  function persist() {
+    if (editCtx) return;           // editing a scheduled session: don't overwrite the everyday setup
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(function () { hostSave(JSON.stringify(settings)); }, 300);
+  }
+
+  function showResume() {
+    if (session && session.rounds.length) {
+      $("resumeBox").classList.remove("hidden");
+      var m = session.mode;
+      $("resumeTitle").textContent = session.schedName ? session.schedName + " — in progress" : "Session in progress";
+      $("resumeInfo").textContent = (m.charAt(0).toUpperCase() + m.slice(1)) + ", " +
+        session.rounds.length + " round" + (session.rounds.length === 1 ? "" : "s") +
+        " played" + (session.scoring ? ", keeping score" : "") + ". Starting a new session will replace it.";
+    } else {
+      $("resumeBox").classList.add("hidden");
+    }
+  }
+
+
+  // =====================================================================
+  // Player database: players, groups and memberships.
+  // Saved as players.json in a folder the user chooses (File System Access
+  // API), with dated copies in a Backups subfolder. A copy is also kept in
+  // the browser's storage as a safety net.
+  // =====================================================================
+  var DB_FILE = "players.json", BACKUP_DIR = "Backups", MAX_BACKUPS = 50, BACKUP_EVERY_MS = 5 * 60 * 1000;
+  var MIRROR_KEY = "fairDinkum.db", SEL_KEY = "fairDinkum.selection", MIGRATED_KEY = "fairDinkum.migrated";
+  var db = { version: 1, players: [], groups: [], sessions: [] };
+  var store = { fsApi: typeof window.showDirectoryPicker === "function", dir: null, state: "none", lastSaved: null, lastBackup: 0, error: "" };
+  // state: none (no folder chosen) | reconnect (need permission again) | ok | error | local (browser can't save files)
+  var testDir = /[?&]testdir=opfs/.test(location.search);   // automated tests only
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function byName(a, b) { return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }); }
+  function playerById(id) { for (var i = 0; i < db.players.length; i++) if (db.players[i].id === id) return db.players[i]; return null; }
+  function groupById(id) { for (var i = 0; i < db.groups.length; i++) if (db.groups[i].id === id) return db.groups[i]; return null; }
+  function findPlayerByName(n) {
+    n = n.trim().toLowerCase();
+    for (var i = 0; i < db.players.length; i++) if (db.players[i].name.toLowerCase() === n) return db.players[i];
+    return null;
+  }
+
+  function idb(op, key, val) {
+    return new Promise(function (res) {
+      try {
+        var rq = indexedDB.open("fairDinkum", 1);
+        rq.onupgradeneeded = function () { rq.result.createObjectStore("kv"); };
+        rq.onsuccess = function () {
+          try {
+            var st = rq.result.transaction("kv", op === "get" ? "readonly" : "readwrite").objectStore("kv");
+            var r = op === "get" ? st.get(key) : st.put(val, key);
+            r.onsuccess = function () { res(op === "get" ? r.result : true); };
+            r.onerror = function () { res(null); };
+          } catch (e) { res(null); }
+        };
+        rq.onerror = function () { res(null); };
+      } catch (e) { res(null); }
+    });
+  }
+
+  function normaliseDb(d) {
+    if (!d || !Array.isArray(d.players) || !Array.isArray(d.groups)) throw new Error("That isn't a Fair Dinkum player database.");
+    var ids = {};
+    var players = d.players.filter(function (p) { return p && p.id && typeof p.name === "string" && p.name.trim(); })
+      .map(function (p) { ids[p.id] = true; return { id: String(p.id), name: p.name.trim() }; });
+    var groups = d.groups.filter(function (g) { return g && g.id && typeof g.name === "string"; })
+      .map(function (g) {
+        return { id: String(g.id), name: g.name.trim() || "Group",
+          memberIds: (g.memberIds || []).map(String).filter(function (m, i, a) { return ids[m] && a.indexOf(m) === i; }) };
+      });
+    var sessions = (Array.isArray(d.sessions) ? d.sessions : []).filter(function (x) { return x && x.id && x.name; })
+      .map(function (x) {
+        return { id: String(x.id), name: String(x.name), when: String(x.when || ""),
+          mode: ["doubles", "singles", "teams"].indexOf(x.mode) >= 0 ? x.mode : "doubles",
+          courtCount: Math.max(1, Math.min(30, parseInt(x.courtCount, 10) || 1)),
+          courtLabels: Array.isArray(x.courtLabels) ? x.courtLabels.map(String) : [],
+          keepScore: !!x.keepScore,
+          playerIds: (x.playerIds || []).map(String).filter(function (m) { return ids[m]; }),
+          guests: (x.guests || []).map(String),
+          pairs: (x.pairs || []).filter(function (pr) { return Array.isArray(pr) && pr.length === 2; }).map(function (pr) { return pr.map(String); }) };
+      });
+    return { version: 1, players: players, groups: groups, sessions: sessions };
+  }
+  function dbText() { return JSON.stringify(db, null, 2); }
+  function mirror() { try { localStorage.setItem(MIRROR_KEY, JSON.stringify(db)); } catch (e) {} }
+
+  async function readFile(dir, name) {
+    try { var fh = await dir.getFileHandle(name); return await (await fh.getFile()).text(); }
+    catch (e) { if (e.name === "NotFoundError") return null; throw e; }
+  }
+  async function writeFile(dir, name, text) {
+    var fh = await dir.getFileHandle(name, { create: true });
+    var w = await fh.createWritable(); await w.write(text); await w.close();
+  }
+  function stamp() {
+    var d = new Date(), p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  }
+  // Copy the current file into Backups before it is overwritten (at most once every few
+  // minutes, so a burst of edits makes one backup), keeping the newest MAX_BACKUPS.
+  async function backupFile(dir, text, force) {
+    if (!text || (!force && Date.now() - store.lastBackup < BACKUP_EVERY_MS)) return;
+    var bdir = await dir.getDirectoryHandle(BACKUP_DIR, { create: true });
+    var base = "players-" + stamp(), name = base + ".json", n = 2;
+    while (await readFile(bdir, name) !== null) name = base + "-" + (n++) + ".json";   // never overwrite a backup
+    await writeFile(bdir, name, text);
+    store.lastBackup = Date.now();
+    var names = [];
+    for await (var entry of bdir.values()) {
+      if (entry.kind === "file" && /^players-\d{8}-\d{6}(-\d+)?\.json$/.test(entry.name)) names.push(entry.name);
+    }
+    names.sort();
+    while (names.length > MAX_BACKUPS) await bdir.removeEntry(names.shift());
+  }
+
+  var saveTimer = null, saving = Promise.resolve();
+  function saveDb() {
+    mirror();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { saving = saving.then(flush); }, 400);
+  }
+  async function flush() {
+    if (store.state !== "ok" || !store.dir) { renderDbStatus(); return; }
+    try {
+      await backupFile(store.dir, await readFile(store.dir, DB_FILE), false);
+      await writeFile(store.dir, DB_FILE, dbText());
+      store.lastSaved = new Date(); store.error = "";
+    } catch (e) {
+      store.state = "error"; store.error = e.message || String(e);
+    }
+    renderDbStatus();
+  }
+
+  // Start using a folder. `prefer` = "file" (load what's there) or "ask".
+  async function useFolder(dir, prefer) {
+    var txt = await readFile(dir, DB_FILE);
+    if (txt) {
+      var fileDb;
+      try { fileDb = normaliseDb(JSON.parse(txt)); }
+      catch (e) { throw new Error("players.json in that folder couldn't be read (" + e.message + "). It hasn't been changed."); }
+      var keepMine = false;
+      if (prefer === "ask" && db.players.length && JSON.stringify(fileDb) !== JSON.stringify(db)) {
+        keepMine = !confirm("That folder already has a Fair Dinkum database (" + fileDb.players.length + " players, " +
+          fileDb.groups.length + " groups).\n\nOK = use that database.\nCancel = keep the " + db.players.length +
+          (db.players.length === 1 ? " player" : " players") + " you have here and save them into that folder (its current file is kept in Backups).");
+      }
+      if (keepMine) { await backupFile(dir, txt, true); await writeFile(dir, DB_FILE, dbText()); }
+      else db = fileDb;
+    } else {
+      await writeFile(dir, DB_FILE, dbText());
+    }
+    store.dir = dir; store.state = "ok"; store.lastSaved = new Date(); store.error = "";
+    mirror();
+    if (!testDir) await idb("put", "dir", dir);
+    refreshAll();
+  }
+
+  async function chooseFolder() {
+    try {
+      var dir = testDir ? await navigator.storage.getDirectory()
+        : await window.showDirectoryPicker({ id: "fairdinkum", mode: "readwrite", startIn: "documents" });
+      await useFolder(dir, "ask");
+      toast("Player database saved to “" + dir.name + "”.", true);
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      toast("Couldn't use that folder: " + (e && e.message || e));
+    }
+  }
+
+  async function reconnect() {
+    try {
+      var p = await store.dir.requestPermission({ mode: "readwrite" });
+      if (p !== "granted") return;
+      if (store.state === "error") {        // we have newer changes in memory: write them
+        store.state = "ok"; saving = saving.then(flush);
+      } else {
+        await useFolder(store.dir, "file");
+      }
+    } catch (e) { toast("Couldn't reconnect: " + (e && e.message || e)); }
+  }
+
+  function canEdit() {
+    if (store.state === "reconnect") { toast("Reconnect to your player database first (button at the top)."); return false; }
+    return true;
+  }
+
+  // One-off: turn the name lists from earlier versions into players.
+  function migrateOldLists() {
+    try { if (localStorage.getItem(MIGRATED_KEY)) return; localStorage.setItem(MIGRATED_KEY, "1"); } catch (e) { return; }
+    if (db.players.length || !settings.players) return;
+    var seen = {};
+    ["doubles", "singles", "teams"].forEach(function (m) {
+      (settings.players[m] || "").split(/\r?\n/).forEach(function (line) {
+        line.split("&").forEach(function (n) {
+          n = n.trim(); var k = n.toLowerCase();
+          if (n && !seen[k]) { seen[k] = true; db.players.push({ id: uid(), name: n }); }
+        });
+      });
+    });
+    if (db.players.length) mirror();
+  }
+
+  async function initDb() {
+    try { var m = localStorage.getItem(MIRROR_KEY); if (m) db = normaliseDb(JSON.parse(m)); } catch (e) {}
+    migrateOldLists();
+    if (!store.fsApi) { store.state = "local"; return; }
+    if (testDir) { store.state = "none"; return; }
+    var h = await idb("get", "dir");
+    if (!h) { store.state = "none"; return; }
+    store.dir = h;
+    try {
+      var perm = await h.queryPermission({ mode: "readwrite" });
+      if (perm === "granted") await useFolder(h, "file"); else store.state = "reconnect";
+    } catch (e) { store.state = "reconnect"; }
+  }
+
+  function exportDb() {
+    var blob = new Blob([dbText()], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "fair-dinkum-players-" + stamp() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  }
+  function importDb(file) {
+    if (!canEdit()) return;
+    file.text().then(function (txt) {
+      var d = normaliseDb(JSON.parse(txt));
+      if (!confirm("Replace your current player list (" + db.players.length + " players, " + db.groups.length +
+        " groups) with this backup (" + d.players.length + " players, " + d.groups.length + " groups)?" +
+        (store.state === "ok" ? "\n\nYour current database file will be copied to Backups first." : ""))) return;
+      var before = dbText();
+      db = d;
+      if (store.state === "ok") {
+        saving = saving.then(function () { return backupFile(store.dir, before, true); }).catch(function () {});
+      }
+      saveDb(); cleanSel(); refreshAll();
+      toast("Backup imported.", true);
+    }).catch(function (e) { toast("Couldn't import that file: " + (e && e.message || e)); });
+  }
+
+  function renderDbStatus() {
+    var html, cls = "";
+    var st = store.state;
+    if (st === "ok") {
+      html = "<span class='grow'>Player database: folder <b>“" + esc(store.dir.name) + "”</b> · players.json" +
+        (store.lastSaved ? " · saved " + store.lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "") + "</span>";
+    } else if (st === "none") {
+      cls = "warn";
+      html = "<span class='grow'>Your player list isn't saved to a file yet. Choose a folder (e.g. Documents) and it will be kept there, with automatic backups.</span>" +
+        "<button class='btn primary sm' data-act='choose'>Choose folder…</button>";
+    } else if (st === "reconnect") {
+      cls = "warn";
+      html = "<span class='grow'>Click to reconnect to your player database in <b>“" + esc(store.dir.name) + "”</b> (the browser asks each time for safety).</span>" +
+        "<button class='btn primary sm' data-act='reconnect'>Reconnect</button>";
+    } else if (st === "error") {
+      cls = "bad";
+      html = "<span class='grow'>Couldn't save to the database file: " + esc(store.error) + ". Your changes are safe in this browser for now.</span>" +
+        "<button class='btn primary sm' data-act='reconnect'>Try again</button>";
+    } else {
+      cls = "warn";
+      html = "<span class='grow'>This browser can't save to a file, so the player list is kept in the browser only. Use <b>Export backup</b> regularly.</span>";
+    }
+    ["dbStatus", "dbStatus2"].forEach(function (id) {
+      var el = $(id); el.className = "dbline " + cls; el.innerHTML = html;
+    });
+    $("chooseFolder2").classList.toggle("hidden", !store.fsApi);
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-act]");
+    if (!b) return;
+    if (b.dataset.act === "choose") chooseFolder();
+    if (b.dataset.act === "reconnect") reconnect();
+  });
+
+  // =====================================================================
+  // Setup: choosing who's playing today
+  // =====================================================================
+  var sel = { ids: {}, guests: [], pairs: [], group: "all", pick: null };
+  // keys: a player id, or "g:" + name for a guest who isn't in the database
+
+  function loadSel() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SEL_KEY) || "null");
+      if (s) { sel.ids = s.ids || {}; sel.guests = s.guests || []; sel.pairs = s.pairs || []; sel.group = s.group || "all"; }
+    } catch (e) {}
+  }
+  function saveSel() {
+    if (editCtx) return;
+    try { localStorage.setItem(SEL_KEY, JSON.stringify({ ids: sel.ids, guests: sel.guests, pairs: sel.pairs, group: sel.group })); } catch (e) {}
+  }
+  function nameOf(k) {
+    if (k.indexOf("g:") === 0) return k.slice(2);
+    var p = playerById(k); return p ? p.name : null;
+  }
+  function selectedKeys() {
+    var keys = db.players.slice().sort(byName).filter(function (p) { return sel.ids[p.id]; }).map(function (p) { return p.id; });
+    return keys.concat(sel.guests.map(function (g) { return "g:" + g; }));
+  }
+  var dbReady = false;
+  function cleanSel() {
+    if (!dbReady) return;      // don't prune the saved selection before the database has loaded
+    Object.keys(sel.ids).forEach(function (id) { if (!playerById(id)) delete sel.ids[id]; });
+    var live = {}; selectedKeys().forEach(function (k) { live[k] = true; });
+    sel.pairs = sel.pairs.filter(function (pr) { return live[pr[0]] && live[pr[1]]; });
+    if (sel.pick && !live[sel.pick]) sel.pick = null;
+    if (sel.group !== "all" && !groupById(sel.group)) sel.group = "all";
+  }
+  function untick(k) {
+    if (k.indexOf("g:") === 0) sel.guests = sel.guests.filter(function (g) { return "g:" + g !== k; });
+    else delete sel.ids[k];
+    cleanSel();
+  }
+  function listedPlayers() {
+    if (sel.group === "all") return db.players.slice().sort(byName);
+    var g = groupById(sel.group);
+    if (!g) return [];
+    return g.memberIds.map(playerById).filter(Boolean).sort(byName);
+  }
+
+  function chip(text, cls, onRemove, onClick) {
+    var c = document.createElement("span"); c.className = "chip " + (cls || "");
+    c.appendChild(document.createTextNode(text));
+    if (onRemove) {
+      var x = document.createElement("button"); x.textContent = "×"; x.title = "Remove";
+      x.addEventListener("click", function (e) { e.stopPropagation(); onRemove(); });
+      c.appendChild(x);
+    }
+    if (onClick) { c.classList.add("pickable"); c.addEventListener("click", onClick); }
+    return c;
+  }
+
+  function renderPicker() {
+    cleanSel();
+    // group dropdown
+    var gp = $("groupPick"); gp.innerHTML = "";
+    var opt = function (v, t) { var o = document.createElement("option"); o.value = v; o.textContent = t; gp.appendChild(o); };
+    opt("all", "All players (" + db.players.length + ")");
+    db.groups.slice().sort(byName).forEach(function (g) { opt(g.id, g.name + " (" + g.memberIds.length + ")"); });
+    gp.value = sel.group;
+
+    // tick list
+    var tl = $("tickList"); tl.innerHTML = "";
+    var list = listedPlayers();
+    if (!list.length) {
+      var e = document.createElement("div"); e.className = "empty";
+      e.textContent = db.players.length ? "No one in this group yet — add members in Players & groups." :
+        "No players yet. Add them in Players & groups, or type a name below.";
+      tl.appendChild(e);
+    }
+    list.forEach(function (p) {
+      var l = document.createElement("label"); if (sel.ids[p.id]) l.className = "on";
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!sel.ids[p.id];
+      cb.addEventListener("change", function () {
+        if (cb.checked) sel.ids[p.id] = true; else untick(p.id);
+        saveSel(); renderPicker();
+      });
+      l.appendChild(cb); l.appendChild(document.createTextNode(p.name)); tl.appendChild(l);
+    });
+
+    // playing today
+    var keys = selectedKeys();
+    $("todayTitle").textContent = "Playing today (" + keys.length + ")";
+    var tc = $("todayChips"); tc.innerHTML = "";
+    if (!keys.length) { var n = document.createElement("span"); n.className = "none"; n.textContent = "Tick players above."; tc.appendChild(n); }
+    keys.forEach(function (k) {
+      tc.appendChild(chip(nameOf(k) + (k.indexOf("g:") === 0 ? " (guest)" : ""), k.indexOf("g:") === 0 ? "guest" : "",
+        function () { untick(k); saveSel(); renderPicker(); }));
+    });
+
+    // pairing (Teams mode)
+    var teams = settings.mode === "teams";
+    $("pairArea").classList.toggle("hidden", !teams);
+    if (teams) {
+      var pc = $("pairChips"); pc.innerHTML = "";
+      var paired = {};
+      sel.pairs.forEach(function (pr, i) {
+        paired[pr[0]] = paired[pr[1]] = true;
+        pc.appendChild(chip(nameOf(pr[0]) + " & " + nameOf(pr[1]), "", function () {
+          sel.pairs.splice(i, 1); saveSel(); renderPicker();
+        }));
+      });
+      if (!sel.pairs.length) { var n2 = document.createElement("span"); n2.className = "none"; n2.textContent = "No pairs yet."; pc.appendChild(n2); }
+      var uc = $("unpairedChips"); uc.innerHTML = "";
+      var loose = keys.filter(function (k) { return !paired[k]; });
+      $("unpairedTitle").textContent = "Not yet paired (" + loose.length + ")";
+      if (!loose.length) { var n3 = document.createElement("span"); n3.className = "none"; n3.textContent = keys.length ? "Everyone is paired." : "Tick players above."; uc.appendChild(n3); }
+      loose.forEach(function (k) {
+        uc.appendChild(chip(nameOf(k), sel.pick === k ? "picked" : "", null, function () {
+          if (!sel.pick) sel.pick = k;
+          else if (sel.pick === k) sel.pick = null;
+          else { sel.pairs.push([sel.pick, k]); sel.pick = null; saveSel(); }
+          renderPicker();
+        }));
+      });
+    }
+    validate();
+  }
+
+  function addGuest() {
+    var name = $("guestName").value.trim();
+    if (!name) return;
+    var existing = findPlayerByName(name);
+    if (existing) {
+      sel.ids[existing.id] = true;
+      toast("“" + existing.name + "” is already on the player list — ticked.", true);
+    } else if ($("guestSave").checked) {
+      if (!canEdit()) return;
+      var p = { id: uid(), name: name };
+      db.players.push(p); saveDb(); sel.ids[p.id] = true;
+    } else {
+      if (sel.guests.some(function (g) { return g.toLowerCase() === name.toLowerCase(); })) { toast("“" + name + "” is already added."); return; }
+      sel.guests.push(name);
+    }
+    $("guestName").value = ""; saveSel(); renderPicker();
+  }
+
+  // =====================================================================
+  // Players & groups screen
+  // =====================================================================
+  var mg = { search: "", gdPlayer: null, view: null };
+
+  function openManage() {
+    $("setup").classList.add("hidden"); $("manage").classList.remove("hidden");
+    mg.view = null; renderManage(); $("newPlayer").focus();
+  }
+  function closeManage() {
+    $("manage").classList.add("hidden"); $("setup").classList.remove("hidden");
+    renderPicker();
+  }
+
+  function groupsOfPlayer(pid) {
+    return db.groups.filter(function (g) { return g.memberIds.indexOf(pid) >= 0; }).sort(byName);
+  }
+  function setMember(g, pid, on) {
+    var i = g.memberIds.indexOf(pid);
+    if (on && i < 0) g.memberIds.push(pid);
+    if (!on && i >= 0) g.memberIds.splice(i, 1);
+  }
+
+  function iconBtn(text, cls, fn) {
+    var b = document.createElement("button"); b.className = "ibtn " + (cls || ""); b.textContent = text;
+    b.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+    return b;
+  }
+  function tag(text, cls, onRemove, title) {
+    var t = document.createElement("span"); t.className = "tag " + (cls || "");
+    t.appendChild(document.createTextNode(text));
+    if (onRemove) {
+      var x = document.createElement("button"); x.textContent = "×"; x.title = title || "Remove";
+      x.addEventListener("click", function (e) { e.stopPropagation(); onRemove(); });
+      t.appendChild(x);
+    }
+    return t;
+  }
+
+  // Inline rename: swaps a name for a text box inside `host`.
+  function renameInline(host, current, onSave) {
+    host.innerHTML = "";
+    var inp = document.createElement("input"); inp.type = "text"; inp.value = current;
+    var done = function (save) {
+      if (save) { var v = inp.value.trim(); if (v && v !== current && onSave(v) === false) { inp.focus(); return; } }
+      renderManage();
+    };
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); done(true); }
+      if (e.key === "Escape") { e.preventDefault(); done(false); }
+    });
+    host.appendChild(inp);
+    host.appendChild(iconBtn("Save", "", function () { done(true); }));
+    host.appendChild(iconBtn("Cancel", "", function () { done(false); }));
+    inp.focus(); inp.select();
+  }
+
+  function renderManage() { renderDbStatus(); renderPlayersList(); renderGroupsList(); }
+
+  // Players, each with the groups they're in (× to remove, + to add).
+  function renderPlayersList() {
+    $("pCount").textContent = "(" + db.players.length + ")";
+    $("delAllPlayers").disabled = !db.players.length;
+    var pl = $("pList"); pl.innerHTML = "";
+    var q = mg.search.toLowerCase();
+    var ps = db.players.slice().sort(byName).filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) >= 0; });
+    if (!ps.length) { var e = document.createElement("div"); e.className = "prow none"; e.textContent = db.players.length ? "No matches." : "No players yet."; pl.appendChild(e); }
+    ps.forEach(function (p) {
+      var row = document.createElement("div"); row.className = "prow tall";
+      var n = document.createElement("div"); n.className = "n";
+      var nm = document.createElement("div"); nm.textContent = p.name; n.appendChild(nm);
+      var tags = document.createElement("div"); tags.className = "tags";
+      groupsOfPlayer(p.id).forEach(function (g) {
+        tags.appendChild(tag(g.name, "grp", function () {
+          if (!canEdit()) return;
+          setMember(g, p.id, false); saveDb(); renderManage();
+        }, "Remove " + p.name + " from " + g.name));
+      });
+      var add = document.createElement("span"); add.className = "tag add"; add.textContent = "+ Add to group";
+      add.addEventListener("click", function () { if (canEdit()) openGroupDialog(p); });
+      tags.appendChild(add);
+      n.appendChild(tags);
+      row.appendChild(n);
+      row.appendChild(iconBtn("Rename", "", function () {
+        if (!canEdit()) return;
+        renameInline(row, p.name, function (v) {
+          var clash = findPlayerByName(v);
+          if (clash && clash !== p) { toast("There's already a player called “" + clash.name + "”."); return false; }
+          p.name = v; saveDb();
+        });
+      }));
+      row.appendChild(iconBtn("Delete", "del", function () {
+        if (!canEdit()) return;
+        if (!confirm("Delete " + p.name + "? They'll also be removed from every group.")) return;
+        db.players = db.players.filter(function (x) { return x !== p; });
+        db.sessions.forEach(function (ss) {
+          ss.playerIds = ss.playerIds.filter(function (m) { return m !== p.id; });
+          ss.pairs = ss.pairs.filter(function (pr) { return pr.indexOf(p.id) < 0; });
+        });
+        db.groups.forEach(function (g) { setMember(g, p.id, false); });
+        saveDb(); cleanSel(); saveSel(); renderManage();
+      }));
+      pl.appendChild(row);
+    });
+  }
+
+  // Groups list: each name opens that group's page.
+  function renderGroupsList() {
+    if (mg.view && !groupById(mg.view)) mg.view = null;
+    $("groupsMain").classList.toggle("hidden", !!mg.view);
+    $("groupPage").classList.toggle("hidden", !mg.view);
+    if (mg.view) { renderGroupPage(); return; }
+    $("gCount").textContent = "(" + db.groups.length + ")";
+    $("delAllGroups").disabled = !db.groups.length;
+    var gl = $("gList"); gl.innerHTML = "";
+    var gsorted = db.groups.slice().sort(byName);
+    if (!gsorted.length) { var e2 = document.createElement("div"); e2.className = "prow none"; e2.textContent = "No groups yet — e.g. “Tuesday Club”."; gl.appendChild(e2); }
+    gsorted.forEach(function (g) {
+      var row = document.createElement("div"); row.className = "prow";
+      var link = document.createElement("button"); link.className = "glink";
+      var t = document.createElement("span"); t.className = "t"; t.textContent = g.name; link.appendChild(t);
+      var sm = document.createElement("small"); sm.textContent = g.memberIds.length + " player" + (g.memberIds.length === 1 ? "" : "s"); link.appendChild(sm);
+      var ch = document.createElement("span"); ch.className = "chev"; ch.textContent = "›"; link.appendChild(ch);
+      link.addEventListener("click", function () { openGroupPage(g.id); });
+      row.appendChild(link);
+      row.appendChild(iconBtn("Rename", "", function () {
+        if (!canEdit()) return;
+        renameInline(row, g.name, function (v) {
+          if (db.groups.some(function (x) { return x !== g && x.name.toLowerCase() === v.toLowerCase(); })) { toast("There's already a group called “" + v + "”."); return false; }
+          g.name = v; saveDb();
+        });
+      }));
+      row.appendChild(iconBtn("Delete", "del", function () {
+        if (!canEdit()) return;
+        if (!confirm("Delete the group “" + g.name + "”? The players themselves are kept.")) return;
+        db.groups = db.groups.filter(function (x) { return x !== g; });
+        saveDb(); cleanSel(); saveSel(); renderManage();
+      }));
+      gl.appendChild(row);
+    });
+  }
+
+  // One group's page: its players, with Remove, and a box to add existing or new players.
+  function openGroupPage(id) { mg.view = id; renderGroupsList(); $("gpAddName").value = ""; $("gpAddName").focus(); }
+  function closeGroupPage() { mg.view = null; renderGroupsList(); }
+  function renderGroupPage() {
+    var g = groupById(mg.view);
+    $("gpName").textContent = g.name;
+    $("gpCount").textContent = g.memberIds.length + " player" + (g.memberIds.length === 1 ? "" : "s");
+    $("gpAddName").placeholder = "Add a player to " + g.name + " — pick from the list or type a new name";
+    var dl = $("gpNames"); dl.innerHTML = "";
+    db.players.slice().sort(byName).forEach(function (p) {
+      if (g.memberIds.indexOf(p.id) < 0) { var o = document.createElement("option"); o.value = p.name; dl.appendChild(o); }
+    });
+    var list = $("gpList"); list.innerHTML = "";
+    var members = g.memberIds.map(playerById).filter(Boolean).sort(byName);
+    if (!members.length) { var e = document.createElement("div"); e.className = "prow none"; e.textContent = "No players in this group yet."; list.appendChild(e); }
+    members.forEach(function (p) {
+      var row = document.createElement("div"); row.className = "prow";
+      var n = document.createElement("div"); n.className = "n"; n.textContent = p.name; row.appendChild(n);
+      row.appendChild(iconBtn("Remove", "del", function () {
+        if (!canEdit()) return;
+        setMember(g, p.id, false); saveDb(); renderManage();
+      }));
+      list.appendChild(row);
+    });
+  }
+  function groupPageAdd() {
+    var v = $("gpAddName").value.trim(); if (!v) return;
+    if (!canEdit()) return;
+    var g = groupById(mg.view);
+    var p = findPlayerByName(v), created = false;
+    if (!p) { p = { id: uid(), name: v }; db.players.push(p); created = true; }
+    if (g.memberIds.indexOf(p.id) >= 0) { toast(p.name + " is already in " + g.name + "."); return; }
+    setMember(g, p.id, true); saveDb();
+    $("gpAddName").value = ""; renderManage(); $("gpAddName").focus();
+    toast(created ? "New player " + p.name + " created and added to " + g.name + "." : p.name + " added to " + g.name + ".", true);
+  }
+
+  // ---- "Which groups?" dialog for one player ----
+  function openGroupDialog(p) {
+    mg.gdPlayer = p;
+    $("gdTitle").textContent = "Groups for " + p.name;
+    $("gdNew").value = "";
+    renderGroupDialog();
+    $("groupDialog").classList.remove("hidden");
+    (db.groups.length ? $("gdList").querySelector("input") : $("gdNew")).focus();
+  }
+  function renderGroupDialog() {
+    var p = mg.gdPlayer, list = $("gdList"); list.innerHTML = "";
+    if (!db.groups.length) { var e = document.createElement("div"); e.className = "muted"; e.style.gridColumn = "1 / -1"; e.textContent = "No groups yet — type a name below to create one."; list.appendChild(e); }
+    db.groups.slice().sort(byName).forEach(function (g) {
+      list.appendChild(editRow(g.name, g.memberIds.indexOf(p.id) >= 0, function (on) {
+        setMember(g, p.id, on); saveDb();
+      }));
+    });
+  }
+  function gdAddGroup() {
+    var v = $("gdNew").value.trim(); if (!v) return;
+    var g = null;
+    db.groups.forEach(function (x) { if (x.name.toLowerCase() === v.toLowerCase()) g = x; });
+    if (!g) { g = { id: uid(), name: v, memberIds: [] }; db.groups.push(g); }
+    setMember(g, mg.gdPlayer.id, true); saveDb();
+    $("gdNew").value = ""; renderGroupDialog(); $("gdNew").focus();
+  }
+  function closeGroupDialog() {
+    $("groupDialog").classList.add("hidden"); mg.gdPlayer = null;
+    renderManage(); $("newPlayer").focus();
+  }
+
+  // ---- Delete all (a backup copy of the database is saved first, where possible) ----
+  function backupNow() {
+    if (store.state !== "ok") return;
+    var before = dbText();
+    saving = saving.then(function () { return backupFile(store.dir, before, true); }).catch(function () {});
+  }
+  function safetyNote() {
+    return store.state === "ok" ? "\n\nA copy of your database will be saved in the Backups folder first, so this can be undone."
+      : "\n\nYour player list isn't saved to a folder, so there's no automatic backup. Consider Export backup first.";
+  }
+  function deleteAllPlayers() {
+    if (!canEdit() || !db.players.length) return;
+    var n = db.players.length;
+    if (!confirm("Delete all " + n + " player" + (n === 1 ? "" : "s") + "?\n\nThey'll also be removed from every group and scheduled session. Groups themselves are kept." + safetyNote())) return;
+    backupNow();
+    db.players = [];
+    db.groups.forEach(function (g) { g.memberIds = []; });
+    db.sessions.forEach(function (ss) { ss.playerIds = []; ss.pairs = ss.pairs.filter(function (pr) { return pr[0].indexOf("g:") === 0 && pr[1].indexOf("g:") === 0; }); });
+    saveDb(); cleanSel(); saveSel(); renderManage();
+    toast("All players deleted.", true);
+  }
+  function deleteAllGroups() {
+    if (!canEdit() || !db.groups.length) return;
+    var n = db.groups.length;
+    if (!confirm("Delete all " + n + " group" + (n === 1 ? "" : "s") + "?\n\nThe players themselves are kept." + safetyNote())) return;
+    backupNow();
+    db.groups = []; mg.view = null;
+    saveDb(); cleanSel(); saveSel(); renderManage();
+    toast("All groups deleted.", true);
+  }
+
+  function addPlayer() {
+    var v = $("newPlayer").value.trim(); if (!v) return;
+    if (!canEdit()) return;
+    var clash = findPlayerByName(v);
+    if (clash) { toast("There's already a player called “" + clash.name + "”."); return; }
+    var p = { id: uid(), name: v };
+    db.players.push(p);
+    saveDb(); $("newPlayer").value = ""; renderManage();
+    openGroupDialog(p);
+  }
+  function addGroup() {
+    var v = $("newGroup").value.trim(); if (!v) return;
+    if (!canEdit()) return;
+    if (db.groups.some(function (x) { return x.name.toLowerCase() === v.toLowerCase(); })) { toast("There's already a group called “" + v + "”."); return; }
+    var g = { id: uid(), name: v, memberIds: [] };
+    db.groups.push(g);
+    saveDb(); $("newGroup").value = ""; renderManage();
+  }
+
+
+  // =====================================================================
+  // Import a list of names from Excel (.xlsx), CSV or a text file.
+  // .xlsx is a zip of XML files; we unzip it with the browser's own
+  // DecompressionStream, so no extra library is needed.
+  // =====================================================================
+  async function unzip(buf) {
+    var dv = new DataView(buf), u8 = new Uint8Array(buf), files = {};
+    var eocd = -1;
+    for (var i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 70000); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error("It doesn't look like an Excel .xlsx file.");
+    var count = dv.getUint16(eocd + 10, true), off = dv.getUint32(eocd + 16, true);
+    var dec = new TextDecoder();
+    for (var n = 0; n < count; n++) {
+      if (dv.getUint32(off, true) !== 0x02014b50) throw new Error("The spreadsheet file seems to be damaged.");
+      var method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true);
+      var nlen = dv.getUint16(off + 28, true), xlen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+      var local = dv.getUint32(off + 42, true);
+      var name = dec.decode(u8.subarray(off + 46, off + 46 + nlen));
+      files[name] = { method: method, local: local, csize: csize };
+      off += 46 + nlen + xlen + clen;
+    }
+    return {
+      has: function (name) { return !!files[name]; },
+      text: async function (name) {
+        var f = files[name]; if (!f) return null;
+        var start = f.local + 30 + dv.getUint16(f.local + 26, true) + dv.getUint16(f.local + 28, true);
+        var data = u8.subarray(start, start + f.csize);
+        if (f.method === 0) return dec.decode(data);
+        if (f.method !== 8) throw new Error("Unsupported compression in the spreadsheet.");
+        var stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        return await new Response(stream).text();
+      }
+    };
+  }
+  function xmlDoc(txt) { return new DOMParser().parseFromString(txt, "application/xml"); }
+  function tags(el, name) { return Array.prototype.slice.call(el.getElementsByTagNameNS("*", name)); }
+  function colIndex(ref) {
+    var m = /^([A-Z]+)/.exec(ref || ""); if (!m) return -1;
+    var n = 0; for (var i = 0; i < m[1].length; i++) n = n * 26 + (m[1].charCodeAt(i) - 64);
+    return n - 1;
+  }
+  function colLetter(i) { var s = ""; i++; while (i > 0) { var r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; }
+
+  // Returns { names: [...], where: "column A of “Sheet1”" }
+  async function readXlsx(buf) {
+    var z = await unzip(buf);
+    var wb = xmlDoc(await z.text("xl/workbook.xml") || "<x/>");
+    var sheet = tags(wb, "sheet")[0];
+    if (!sheet) throw new Error("No worksheets found in that file.");
+    var sheetName = sheet.getAttribute("name") || "Sheet1";
+    var rid = sheet.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || sheet.getAttribute("r:id");
+    var path = "xl/worksheets/sheet1.xml";
+    var rels = await z.text("xl/_rels/workbook.xml.rels");
+    if (rels && rid) {
+      tags(xmlDoc(rels), "Relationship").forEach(function (r) {
+        if (r.getAttribute("Id") === rid) {
+          var t = r.getAttribute("Target");
+          path = t.charAt(0) === "/" ? t.slice(1) : "xl/" + t.replace(/^\.\//, "");
+        }
+      });
+    }
+    var shared = [];
+    var sst = await z.text("xl/sharedStrings.xml");
+    if (sst) tags(xmlDoc(sst), "si").forEach(function (si) {
+      shared.push(tags(si, "t").map(function (t) { return t.textContent; }).join(""));
+    });
+    var sx = await z.text(path);
+    if (!sx) throw new Error("Couldn't find the first worksheet in that file.");
+    var cols = {};   // column index -> [values in row order]
+    tags(xmlDoc(sx), "row").forEach(function (row) {
+      tags(row, "c").forEach(function (c) {
+        var ci = colIndex(c.getAttribute("r")), t = c.getAttribute("t"), v;
+        if (t === "s") { var vv = tags(c, "v")[0]; v = vv ? shared[parseInt(vv.textContent, 10)] : ""; }
+        else if (t === "inlineStr") v = tags(c, "t").map(function (x) { return x.textContent; }).join("");
+        else { var v2 = tags(c, "v")[0]; v = v2 ? v2.textContent : ""; }
+        v = (v || "").trim();
+        if (ci >= 0 && v) (cols[ci] = cols[ci] || []).push(v);
+      });
+    });
+    var first = Object.keys(cols).map(Number).sort(function (a, b) { return a - b; })[0];
+    if (first === undefined) throw new Error("The first worksheet is empty.");
+    return { names: cols[first], where: "column " + colLetter(first) + " of “" + sheetName + "”" };
+  }
+  function readTextList(txt, isCsv) {
+    var names = txt.replace(/^﻿/, "").split(/\r?\n/).map(function (line) {
+      if (!isCsv) return line.trim();
+      var m = /^\s*"((?:[^"]|"")*)"/.exec(line);
+      return (m ? m[1].replace(/""/g, '"') : line.split(/[,;\t]/)[0]).trim();
+    }).filter(Boolean);
+    return { names: names, where: isCsv ? "the first column" : "each line" };
+  }
+
+  var xl = null;   // { names, where, file }
+  async function importNamesFile(file) {
+    if (!canEdit()) return;
+    try {
+      var ext = (file.name.split(".").pop() || "").toLowerCase(), res;
+      if (ext === "xlsx") res = await readXlsx(await file.arrayBuffer());
+      else if (ext === "csv") res = readTextList(await file.text(), true);
+      else if (ext === "txt") res = readTextList(await file.text(), false);
+      else if (ext === "xls") throw new Error("That's the older .xls format. In Excel, use File › Save As › Excel Workbook (.xlsx), then import that.");
+      else throw new Error("Please choose an .xlsx, .csv or .txt file.");
+      if (!res.names.length) throw new Error("No names found in that file.");
+      xl = { names: res.names, where: res.where, file: file.name, off: {} };
+      openXlDialog();
+    } catch (e) { toast("Couldn't read that file: " + (e && e.message || e)); }
+  }
+  function xlCandidates() {
+    var list = xl.names.slice(), heading = $("xlHeading").checked;
+    var seen = {}, out = [];
+    list.forEach(function (n, i) {
+      var k = n.toLowerCase(), st = "new";
+      if (i === 0 && heading) st = "skip";
+      else if (seen[k]) st = "skip";
+      else if (xl.off[i]) st = "off";
+      else if (findPlayerByName(n)) st = "dup";
+      if (st !== "skip" && st !== "off") seen[k] = true;
+      out.push({ name: n, st: st, i: i });
+    });
+    return out;
+  }
+  function openXlDialog() {
+    $("xlSource").textContent = "From " + xl.file + " — " + xl.where + ".";
+    $("xlFirst").textContent = "“" + xl.names[0] + "”";
+    $("xlHeading").checked = /^(names?|players?|full ?names?|members?)$/i.test(xl.names[0]);
+    var gs = $("xlGroup"); gs.innerHTML = "";
+    var opt = function (v, t) { var o = document.createElement("option"); o.value = v; o.textContent = t; gs.appendChild(o); };
+    opt("", "No group"); db.groups.slice().sort(byName).forEach(function (g) { opt(g.id, g.name); }); opt("__new", "New group…");
+    gs.value = mg.view && groupById(mg.view) ? mg.view : "";
+    $("xlNewGroup").value = ""; $("xlNewGroup").classList.add("hidden");
+    $("xlErrors").textContent = "";
+    renderXl();
+    $("xlDialog").classList.remove("hidden");
+  }
+  function renderXl() {
+    var c = xlCandidates(), list = $("xlList"); list.innerHTML = "";
+    c.forEach(function (x) {
+      var d = document.createElement("label"); d.className = "xn " + (x.st === "new" || x.st === "off" ? "" : x.st);
+      var cb = document.createElement("input"); cb.type = "checkbox";
+      cb.checked = x.st === "new" || x.st === "dup"; cb.disabled = x.st === "skip";
+      cb.addEventListener("change", function () { if (cb.checked) delete xl.off[x.i]; else xl.off[x.i] = true; renderXl(); });
+      d.appendChild(cb); d.appendChild(document.createTextNode(x.name)); list.appendChild(d);
+    });
+    var nNew = c.filter(function (x) { return x.st === "new"; }).length, nDup = c.filter(function (x) { return x.st === "dup"; }).length;
+    var gsel = $("xlGroup").value;
+    $("xlSummary").textContent = nNew + " new player" + (nNew === 1 ? "" : "s") + " to add" +
+      (nDup ? "; " + nDup + " already on your list " + (gsel ? "(they won't be duplicated, but will be added to the group)" : "(skipped)") : "") + ".";
+    $("xlGo").textContent = "Import " + nNew + " player" + (nNew === 1 ? "" : "s");
+    $("xlGo").disabled = !nNew && !(nDup && gsel);
+  }
+  function doXlImport() {
+    if (!canEdit()) return;
+    var gsel = $("xlGroup").value, g = null;
+    if (gsel === "__new") {
+      var gn = $("xlNewGroup").value.trim();
+      if (!gn) { $("xlErrors").textContent = "Type a name for the new group."; return; }
+      db.groups.forEach(function (x) { if (x.name.toLowerCase() === gn.toLowerCase()) g = x; });
+      if (!g) { g = { id: uid(), name: gn, memberIds: [] }; db.groups.push(g); }
+    } else if (gsel) g = groupById(gsel);
+    var added = 0, grouped = 0;
+    xlCandidates().forEach(function (x) {
+      if (x.st === "skip" || x.st === "off") return;
+      var p = findPlayerByName(x.name);
+      if (!p) { p = { id: uid(), name: x.name }; db.players.push(p); added++; }
+      if (g && g.memberIds.indexOf(p.id) < 0) { g.memberIds.push(p.id); grouped++; }
+    });
+    saveDb(); closeXl(); renderManage();
+    toast(added + " player" + (added === 1 ? "" : "s") + " imported" + (g ? ", " + grouped + " added to " + g.name : "") + ".", true);
+  }
+  function closeXl() { $("xlDialog").classList.add("hidden"); xl = null; }
+
+
+  // =====================================================================
+  // Scheduled sessions: saved in advance (with players, format and courts),
+  // launched on the day, and removed with "Finish session".
+  // The setup form doubles as the editor: while editing, the everyday setup
+  // is put aside and restored afterwards.
+  // =====================================================================
+  var editCtx = null;     // { id|null, stash: {settings, sel} }
+  var launching = null;   // the scheduled session being started (read by startSession)
+
+  function fmtWhen(w) {
+    if (!w) return "No date set";
+    var d = new Date(w); if (isNaN(d)) return w;
+    return d.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  function schedById(id) { for (var i = 0; i < db.sessions.length; i++) if (db.sessions[i].id === id) return db.sessions[i]; return null; }
+  function planCount(ss) { return ss.playerIds.length + ss.guests.length; }
+  var MODE_NAME = { doubles: "Doubles", singles: "Singles", teams: "Teams" };
+
+  function renderSchedule() {
+    var list = $("schedList"); list.innerHTML = "";
+    var items = db.sessions.slice().sort(function (a, b) { return (a.when || "9999").localeCompare(b.when || "9999"); });
+    if (!items.length) {
+      var e = document.createElement("div"); e.className = "none"; e.style.padding = "6px 2px";
+      e.textContent = "Nothing scheduled. Use “+ Schedule a session” to set one up in advance.";
+      list.appendChild(e); return;
+    }
+    var now = new Date();
+    items.forEach(function (ss) {
+      var live = session && session.schedId === ss.id && session.rounds.length;
+      var row = document.createElement("div"); row.className = "srow" + (live ? " live" : "");
+      var info = document.createElement("div"); info.className = "si";
+      var n = document.createElement("div"); n.className = "sn"; n.textContent = ss.name; info.appendChild(n);
+      var w = document.createElement("div"); w.className = "sw"; w.textContent = fmtWhen(ss.when);
+      if (live) { var l = document.createElement("span"); l.className = "sd"; l.textContent = "  · in progress"; w.appendChild(l); }
+      else if (ss.when && new Date(ss.when) < now) { var pst = document.createElement("span"); pst.className = "past"; pst.textContent = "  · date has passed"; w.appendChild(pst); }
+      info.appendChild(w);
+      var dd = document.createElement("div"); dd.className = "sd";
+      var cnt = planCount(ss);
+      dd.textContent = MODE_NAME[ss.mode] + " · " + cnt + " player" + (cnt === 1 ? "" : "s") +
+        (ss.mode === "teams" ? " (" + ss.pairs.length + " pair" + (ss.pairs.length === 1 ? "" : "s") + ")" : "") +
+        " · " + ss.courtCount + " court" + (ss.courtCount === 1 ? "" : "s") + (ss.keepScore ? " · keeping score" : "");
+      info.appendChild(dd);
+      row.appendChild(info);
+      if (live) {
+        row.appendChild(mkBtn("Resume", "primary", function () { view = session.rounds.length - 1; enterRun(); }));
+      } else {
+        row.appendChild(mkBtn("Edit", "secondary", function () { startEdit(ss); }));
+        row.appendChild(mkBtn("Delete", "secondary", function () {
+          if (!canEdit()) return;
+          if (!confirm("Delete the scheduled session “" + ss.name + "”?")) return;
+          db.sessions = db.sessions.filter(function (x) { return x !== ss; }); saveDb(); renderSchedule();
+        }));
+        row.appendChild(mkBtn("Launch", "primary", function () { launchPlan(ss); }));
+      }
+      list.appendChild(row);
+    });
+  }
+  function mkBtn(text, kind, fn) {
+    var b = document.createElement("button"); b.className = "btn sm " + kind; b.textContent = text;
+    b.addEventListener("click", fn); return b;
+  }
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function loadPlanIntoForm(ss) {
+    settings.mode = ss.mode; settings.courtCount = ss.courtCount; settings.courtLabels = ss.courtLabels.slice(); settings.keepScore = ss.keepScore;
+    sel.ids = {}; ss.playerIds.forEach(function (id) { sel.ids[id] = true; });
+    sel.guests = ss.guests.slice(); sel.pairs = clone(ss.pairs); sel.group = "all"; sel.pick = null;
+  }
+  function refreshForm() {
+    $("courtCount").value = settings.courtCount;
+    $("keepScore").checked = !!settings.keepScore;
+    renderCourtLabels();
+    setMode(settings.mode);
+  }
+
+  function startEdit(ss) {
+    if (ss && !canEdit()) return;
+    editCtx = { id: ss ? ss.id : null, stash: { settings: clone(settings), sel: clone(sel) } };
+    if (ss) loadPlanIntoForm(ss);
+    else { sel.ids = {}; sel.guests = []; sel.pairs = []; sel.group = "all"; sel.pick = null; }
+    $("ebTitle").textContent = ss ? "Editing: " + ss.name : "New scheduled session";
+    $("ebName").value = ss ? ss.name : "";
+    $("ebWhen").value = ss ? ss.when : "";
+    $("ebErrors").textContent = "";
+    document.body.classList.add("editing");
+    $("editBar").classList.remove("hidden");
+    refreshForm();
+    window.scrollTo(0, 0); $("setup").scrollTop = 0;
+    $("ebName").focus();
+  }
+  function endEdit() {
+    var st = editCtx.stash;
+    editCtx = null;
+    settings = st.settings; sel.ids = st.sel.ids; sel.guests = st.sel.guests; sel.pairs = st.sel.pairs; sel.group = st.sel.group; sel.pick = null;
+    document.body.classList.remove("editing");
+    $("editBar").classList.add("hidden");
+    refreshForm(); renderSchedule();
+  }
+  function saveEdit() {
+    if (!canEdit()) return;
+    var name = $("ebName").value.trim(), when = $("ebWhen").value;
+    var errs = [];
+    if (!name) errs.push("Give the session a name.");
+    if (!when) errs.push("Choose a date and time.");
+    if (errs.length) { $("ebErrors").textContent = errs.join(" "); return; }
+    var rec = editCtx.id ? schedById(editCtx.id) : null;
+    if (!rec) { rec = { id: uid() }; db.sessions.push(rec); }
+    rec.name = name; rec.when = when;
+    rec.mode = settings.mode; rec.courtCount = settings.courtCount;
+    rec.courtLabels = settings.courtLabels.slice(0, settings.courtCount); rec.keepScore = !!settings.keepScore;
+    rec.playerIds = db.players.filter(function (p) { return sel.ids[p.id]; }).map(function (p) { return p.id; });
+    rec.guests = sel.guests.slice(); rec.pairs = clone(sel.pairs);
+    saveDb();
+    endEdit();
+    toast("“" + name + "” saved for " + fmtWhen(when) + ".", true);
+  }
+
+  // Start a scheduled session. Uses the normal start path, then puts the everyday setup back.
+  function launchPlan(ss) {
+    if (session && session.rounds.length && !(session.schedId === ss.id) &&
+        !confirm("Another session is in progress" + (session.schedName ? " (“" + session.schedName + "”)" : "") +
+          ". Launching “" + ss.name + "” will replace it. Continue?")) return;
+    var keep = { settings: clone(settings), sel: clone(sel) };
+    loadPlanIntoForm(ss);
+    editCtx = { id: ss.id, stash: keep };      // stops the plan overwriting the everyday setup
+    refreshForm();
+    var units = validate();
+    if (!units) {
+      var why = $("errors").textContent || $("summary").textContent;
+      editCtx = null; settings = keep.settings; Object.assign(sel, keep.sel); refreshForm();
+      toast("“" + ss.name + "” can't start yet: " + why + " Use Edit to fix it.");
+      return;
+    }
+    launching = ss;
+    var prev = session; session = null;         // skip the "discard?" question — asked above
+    startSession();
+    if (!session) session = prev;
+    launching = null;
+    editCtx = null; settings = keep.settings; Object.assign(sel, keep.sel);
+    refreshForm();
+  }
+
+  function finishSession() {
+    if (!session) return;
+    var label = session.schedName ? "“" + session.schedName + "”" : "this session";
+    if (!confirm("Finish " + label + "? The rounds" + (session.scoring ? " and leaderboard" : "") +
+      " will be cleared" + (session.schedId ? " and it will be removed from Scheduled sessions" : "") + ".")) return;
+    if (session.schedId) { db.sessions = db.sessions.filter(function (x) { return x.id !== session.schedId; }); saveDb(); }
+    session = null;
+    showResume(); renderSchedule();
+    toast("Session finished.", true);
+  }
+
+  function refreshAll() {
+    cleanSel(); saveSel();
+    renderDbStatus();
+    var dl = $("dbNames"); dl.innerHTML = "";
+    db.players.slice().sort(byName).forEach(function (p) { var o = document.createElement("option"); o.value = p.name; dl.appendChild(o); });
+    if (!$("manage").classList.contains("hidden")) renderManage();
+    renderPicker(); renderSchedule();
+  }
+
+  function startSession() {
+    var units = validate();
+    if (!units) return;
+    if (session && session.rounds.length &&
+        !confirm("A session is already in progress. Start a new one and discard it?")) return;
+    var courts = [];
+    for (var i = 0; i < settings.courtCount; i++) courts.push(courtLabel(i));
+    session = E.createSession({ mode: settings.mode, courts: courts, units: units });
+    session.scoring = !!settings.keepScore;
+    session.schedId = launching ? launching.id : null;
+    session.schedName = launching ? launching.name : null;
+    computeDisplayNames(session);
+    E.nextRound(session);
+    view = 0;
+    enterRun();
+  }
+
+  // ---------- run screen ----------
+  function enterRun() {
+    $("runName").textContent = session.schedName || "";
+    $("toast").classList.add("hidden");
+    $("setup").classList.add("hidden");
+    $("run").classList.remove("hidden");
+    hostFull(true);
+    document.querySelectorAll(".scoreonly").forEach(function (x) { x.classList.toggle("hidden", !session.scoring); });
+    render();
+    // re-fit after the window has actually gone full screen
+    setTimeout(function () { if (!inScoreBox()) render(); }, 150);
+    setTimeout(function () { if (!inScoreBox()) render(); }, 500);
+  }
+
+  function leaveRun() {
+    hostFull(false);
+    closeBoard();
+    $("toast").classList.add("hidden");
+    $("run").classList.add("hidden");
+    $("setup").classList.remove("hidden");
+    showResume(); renderSchedule();
+  }
+
+  // ---------- display names during a session ----------
+  // "Paul Cook" -> "Paul C". If two people in the session would get the same
+  // short name, both are shown in full instead.
+  function shortName(full) {
+    var w = full.trim().split(/\s+/);
+    return w.length < 2 ? full.trim() : w[0] + " " + w[w.length - 1].charAt(0).toUpperCase();
+  }
+  function computeDisplayNames(sess) {
+    var people = [];
+    sess.order.forEach(function (id) {
+      var u = sess.units[id];
+      (u.members || [u.name]).forEach(function (n) { people.push(n); });
+    });
+    var count = {};
+    people.forEach(function (n) { var k = shortName(n).toLowerCase(); count[k] = (count[k] || 0) + 1; });
+    sess.disp = {};
+    people.forEach(function (n) { sess.disp[n] = count[shortName(n).toLowerCase()] > 1 ? n : shortName(n); });
+  }
+  function disp(n) { return (session.disp && session.disp[n]) || n; }
+  function unitDisplay(u) { return u.members ? disp(u.members[0]) + " & " + disp(u.members[1]) : disp(u.name); }
+
+  function unitLines(id) {
+    var u = session.units[id];
+    return u.members ? [disp(u.members[0]) + " &", disp(u.members[1])] : [disp(u.name)];
+  }
+
+  function gridShape(n) {
+    var W = window.innerWidth, H = window.innerHeight * (document.body.classList.contains("touch") ? 0.64 : 0.72);
+    var best = null;
+    for (var cols = 1; cols <= n; cols++) {
+      var rows = Math.ceil(n / cols);
+      var cw = W / cols, ch = H / rows;
+      // a court card reads best a little taller than wide; score the smaller dimension
+      var score = Math.min(cw * 0.9, ch);
+      if (!best || score > best.score + 0.5) best = { cols: cols, rows: rows, score: score };
+    }
+    return best;
+  }
+
+  function render() {
+    if (!session) return;
+    var rd = session.rounds[view], latest = session.rounds.length - 1;
+    $("roundNo").textContent = view + 1;
+    $("tbPrev").disabled = view === 0;
+    var v = $("viewing");
+    if (view < latest) { v.textContent = "Earlier round — latest is " + (latest + 1); v.classList.remove("hidden"); }
+    else v.classList.add("hidden");
+
+    var shape = gridShape(rd.matches.length);
+    var box = $("courts");
+    box.style.gridTemplateColumns = "repeat(" + shape.cols + ", 1fr)";
+    box.style.gridTemplateRows = "repeat(" + shape.rows + ", 1fr)";
+    box.innerHTML = "";
+    rd.matches.forEach(function (m) {
+      var c = document.createElement("div"); c.className = "court";
+      var lab = document.createElement("div"); lab.className = "label"; lab.textContent = session.courts[m.court];
+      var body = document.createElement("div"); body.className = "body";
+      [["a", m.sideA], ["vs"], ["b", m.sideB]].forEach(function (part) {
+        if (part[0] === "vs") {
+          var vs = document.createElement("div"); vs.className = "vs"; vs.textContent = "VS"; body.appendChild(vs); return;
+        }
+        var s = document.createElement("div"); s.className = "side " + part[0];
+        var nm = document.createElement("div"); nm.className = "nm"; s.appendChild(nm);
+        part[1].forEach(function (id) {
+          unitLines(id).forEach(function (line) {
+            var n = document.createElement("div"); n.className = "name"; n.textContent = line; nm.appendChild(n);
+          });
+        });
+        if (session.scoring) s.appendChild(scoreBox(m, part[0]));
+        body.appendChild(s);
+      });
+      c.appendChild(lab); c.appendChild(body); box.appendChild(c);
+    });
+
+    var sit = rd.sitting;
+    $("sitbar").classList.toggle("hidden", sit.length === 0);
+    $("sitNames").innerHTML = sit.map(function (id) { return "<span>" + esc(unitDisplay(session.units[id])) + "</span>"; }).join("");
+
+    fitAll(shape);
+    fitSitting();
+    markScores();
+  }
+
+  // ---------- scoring ----------
+  function scoreBox(m, side) {
+    if (!m.score) m.score = { a: null, b: null };
+    var inp = document.createElement("input");
+    inp.className = "score"; inp.type = "text"; inp.inputMode = "numeric"; inp.maxLength = 2; inp.size = 2;
+    inp.autocomplete = "off"; inp.dataset.side = side;
+    inp.value = m.score[side] === null ? "" : m.score[side];
+    inp.addEventListener("input", function () {
+      inp.value = inp.value.replace(/\D/g, "").slice(0, 2);
+      m.score[side] = inp.value === "" ? null : parseInt(inp.value, 10);
+      markScores();
+    });
+    return inp;
+  }
+
+  function matchState(m) {
+    if (!m.score || m.score.a === null || m.score.b === null) return "missing";
+    return m.score.a === m.score.b ? "tied" : "done";
+  }
+
+  // Highlight winners and tied (invalid) scores on the current round.
+  function markScores() {
+    if (!session || !session.scoring) return;
+    var rd = session.rounds[view];
+    document.querySelectorAll(".court").forEach(function (c, i) {
+      var m = rd.matches[i], st = matchState(m);
+      var a = c.querySelector(".side.a"), b = c.querySelector(".side.b");
+      a.classList.toggle("win", st === "done" && m.score.a > m.score.b);
+      b.classList.toggle("win", st === "done" && m.score.b > m.score.a);
+      c.querySelectorAll(".score").forEach(function (x) { x.classList.toggle("bad", st === "tied"); });
+    });
+  }
+
+  // Returns null if the round is complete, otherwise a message.
+  function roundProblem(rd) {
+    var missing = 0, tied = 0;
+    rd.matches.forEach(function (m) { var st = matchState(m); if (st === "missing") missing++; if (st === "tied") tied++; });
+    if (tied) return "A score can't be a tie — check the court" + (tied > 1 ? "s" : "") + " marked in red.";
+    if (missing) return "Enter the score for " + (missing === 1 ? "1 more court" : missing + " more courts") + " before moving on.";
+    return null;
+  }
+
+  function focusFirstEmpty() {
+    var boxes = document.querySelectorAll(".score");
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].value === "" || boxes[i].classList.contains("bad")) { boxes[i].focus(); boxes[i].select(); return; }
+    }
+  }
+
+  // Wins first, then points margin. Equal on both = shared rank.
+  function standings() {
+    var t = {};
+    session.order.forEach(function (id) {
+      t[id] = { id: id, name: unitDisplay(session.units[id]), active: session.units[id].active, p: 0, w: 0, l: 0, pf: 0, pa: 0 };
+    });
+    session.rounds.forEach(function (rd) {
+      rd.matches.forEach(function (m) {
+        if (matchState(m) !== "done") return;
+        [[m.sideA, m.score.a, m.score.b], [m.sideB, m.score.b, m.score.a]].forEach(function (x) {
+          x[0].forEach(function (id) {
+            var r = t[id]; r.p++; r.pf += x[1]; r.pa += x[2];
+            if (x[1] > x[2]) r.w++; else r.l++;
+          });
+        });
+      });
+    });
+    var rows = Object.keys(t).map(function (k) { var r = t[k]; r.m = r.pf - r.pa; return r; })
+      .filter(function (r) { return r.active || r.p > 0; });
+    rows.sort(function (a, b) { return b.w - a.w || b.m - a.m || a.name.localeCompare(b.name); });
+    rows.forEach(function (r, i) {
+      var prev = rows[i - 1];
+      r.rank = prev && prev.w === r.w && prev.m === r.m ? prev.rank : i + 1;
+    });
+    return rows;
+  }
+
+  function openBoard() {
+    var rows = standings();
+    var done = 0;
+    session.rounds.forEach(function (rd) { if (!roundProblem(rd)) done++; });
+    $("boardSub").textContent = done + " of " + session.rounds.length + " round" +
+      (session.rounds.length === 1 ? "" : "s") + " fully scored";
+    var perCol = rows.length > 16 ? Math.ceil(rows.length / 2) : rows.length;
+    var cols = $("boardCols"); cols.innerHTML = "";
+    for (var c = 0; c * perCol < rows.length; c++) {
+      var html = "<table><tr><th></th><th class='l'>" + (session.mode === "teams" ? "Team" : "Player") +
+        "</th><th>Played</th><th>Won</th><th>Lost</th><th>For</th><th>Agst</th><th>Margin</th></tr>";
+      rows.slice(c * perCol, (c + 1) * perCol).forEach(function (r) {
+        var shared = rows.filter(function (x) { return x.rank === r.rank; }).length > 1;
+        html += "<tr" + (r.active ? "" : " class='gone'") + "><td class='rank'>" + (shared ? "=" : "") + r.rank +
+          "</td><td class='l'>" + esc(r.name) + (r.active ? "" : " (left)") + "</td><td>" + r.p + "</td><td class='w'>" + r.w +
+          "</td><td>" + r.l + "</td><td>" + r.pf + "</td><td>" + r.pa + "</td><td class='" +
+          (r.m > 0 ? "pos" : r.m < 0 ? "neg" : "") + "'>" + (r.m > 0 ? "+" : "") + r.m + "</td></tr>";
+      });
+      cols.innerHTML += html + "</table>";
+    }
+    $("board").classList.remove("hidden");
+    // biggest text that fits the screen
+    var sz = window.innerHeight * 0.05, avail = $("boardCols").clientHeight, availW = $("boardCols").clientWidth;
+    cols.style.fontSize = sz + "px";
+    while (sz > 10 && (cols.scrollHeight > avail || cols.scrollWidth > availW)) { sz *= 0.94; cols.style.fontSize = sz + "px"; }
+  }
+  function closeBoard() { $("board").classList.add("hidden"); }
+
+  // Keep the sitting-out list to at most ~18% of the screen height.
+  function fitSitting() {
+    var el = $("sitNames"), sz = window.innerHeight * 0.036, maxH = window.innerHeight * 0.18;
+    el.style.fontSize = sz + "px";
+    while (sz > 12 && el.scrollHeight > maxH) { sz *= 0.92; el.style.fontSize = sz + "px"; }
+  }
+
+  // Size text to fill each court card as large as possible without overflowing.
+  function fitAll(shape) {
+    var courts = document.querySelectorAll(".court");
+    if (!courts.length) return;
+    var card = courts[0].getBoundingClientRect();
+    var labelSize = Math.max(14, Math.min(card.height * 0.085, card.width * 0.09));
+    var minName = Infinity;
+    courts.forEach(function (c) {
+      var lab = c.querySelector(".label");
+      var ls = labelSize;
+      lab.style.height = lab.style.lineHeight = (labelSize * 1.6) + "px";
+      lab.style.fontSize = ls + "px";
+      while (ls > 12 && lab.scrollWidth > lab.clientWidth) { ls *= 0.93; lab.style.fontSize = ls + "px"; }
+      c.querySelector(".vs").style.fontSize = Math.max(12, labelSize * 0.6) + "px";
+      c.querySelectorAll(".side").forEach(function (side) {
+        var sc = side.querySelector(".score");
+        if (sc) sc.style.fontSize = Math.max(14, Math.min(side.clientHeight * 0.42, side.clientWidth * 0.25 / 2.4)) + "px";
+        var nm = side.querySelector(".nm");
+        var names = side.querySelectorAll(".name");
+        // largest size where the names fit the box's height
+        var fits = function (sz) {
+          names.forEach(function (n) { n.style.fontSize = sz + "px"; });
+          return nm.scrollHeight <= nm.clientHeight + 1;
+        };
+        var lo = 10, hi = Math.min(card.height * 0.16, card.width * 0.13);
+        if (fits(hi)) lo = hi;
+        else for (var k = 0; k < 14; k++) { var mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+        minName = Math.min(minName, lo);
+      });
+    });
+    // One size everywhere so no one looks more important; a name that is too wide
+    // for its box is shrunk on its own rather than shrinking everybody.
+    document.querySelectorAll(".court .name").forEach(function (n) {
+      var sz = minName;
+      n.style.fontSize = sz + "px";
+      var w = n.clientWidth - 2;
+      if (n.scrollWidth > w) n.style.fontSize = Math.max(10, sz * w / n.scrollWidth) + "px";
+    });
+  }
+
+  function toast(msg, ok) {
+    var t = $("toast"); t.textContent = msg; t.classList.remove("hidden");
+    t.style.background = ok ? "var(--ok)" : "";
+    clearTimeout(toast.tm); toast.tm = setTimeout(function () { t.classList.add("hidden"); }, 3500);
+  }
+
+  function next() {
+    if (session.scoring) {
+      var prob = roundProblem(session.rounds[view]);
+      if (prob) { toast(prob); focusFirstEmpty(); return; }
+    }
+    if (view < session.rounds.length - 1) { view++; render(); return; }
+    var r = E.nextRound(session);
+    if (!r) { toast("Not enough players for a court — press E to add players."); return; }
+    view = session.rounds.length - 1; render();
+  }
+  function prev() { if (view > 0) { view--; render(); } }
+
+  // ---------- mid-session player editing ----------
+  var pending = null;
+  function openEdit() {
+    pending = { toggles: {}, adds: [] };
+    $("editTitle").textContent = session.mode === "teams" ? "Teams in this session" : "Players in this session";
+    $("addName").placeholder = session.mode === "teams" ? "Add a team, e.g. Sam Jones & Alex Reid" : "Add a player";
+    $("editErrors").textContent = "";
+    renderEditList();
+    $("editOverlay").classList.remove("hidden");
+    $("addName").value = ""; $("addName").focus();
+  }
+  function renderEditList() {
+    var list = $("editList"); list.innerHTML = "";
+    session.order.forEach(function (id) {
+      var u = session.units[id];
+      var on = id in pending.toggles ? pending.toggles[id] : u.active;
+      list.appendChild(editRow(u.name, on, function (v) { pending.toggles[id] = v; }));
+    });
+    pending.adds.forEach(function (a, i) {
+      list.appendChild(editRow(a.name + "  (new)", true, function (v) { a.keep = v; }));
+    });
+  }
+  function editRow(text, on, cb) {
+    var l = document.createElement("label");
+    var cbx = document.createElement("input"); cbx.type = "checkbox"; cbx.checked = on;
+    cbx.addEventListener("change", function () { cb(cbx.checked); });
+    l.appendChild(cbx); l.appendChild(document.createTextNode(text));
+    return l;
+  }
+  function addPending() {
+    var v = $("addName").value.trim(); if (!v) return;
+    var err = "", unit;
+    if (session.mode === "teams") {
+      var parts = v.split("&").map(function (s) { return s.trim(); });
+      if (parts.length !== 2 || !parts[0] || !parts[1]) err = "Enter two names separated by &.";
+      else unit = { name: parts[0] + " & " + parts[1], members: parts };
+    } else unit = { name: v };
+    if (!err) {
+      var existing = session.order.map(function (id) { return session.units[id].name.toLowerCase(); })
+        .concat(pending.adds.map(function (a) { return a.name.toLowerCase(); }));
+      if (existing.indexOf(unit.name.toLowerCase()) >= 0) err = "“" + unit.name + "” is already in the list — tick them instead.";
+    }
+    $("editErrors").textContent = err;
+    if (err) return;
+    unit.keep = true; pending.adds.push(unit);
+    $("addName").value = ""; renderEditList();
+  }
+  function applyEdit() {
+    var activeAfter = 0;
+    session.order.forEach(function (id) {
+      var on = id in pending.toggles ? pending.toggles[id] : session.units[id].active;
+      if (on) activeAfter++;
+    });
+    pending.adds.forEach(function (a) { if (a.keep) activeAfter++; });
+    if (activeAfter < E.unitsPerCourt(session.mode)) {
+      $("editErrors").textContent = "That would leave too few to fill a court."; return;
+    }
+    Object.keys(pending.toggles).forEach(function (id) {
+      if (pending.toggles[id]) E.restoreUnit(session, id); else E.removeUnit(session, id);
+    });
+    pending.adds.forEach(function (a) { if (a.keep) E.addUnit(session, { name: a.name, members: a.members }); });
+    computeDisplayNames(session);
+    closeEdit();
+    toast("Player changes apply from the next new round.", true);
+  }
+  function closeEdit() { $("editOverlay").classList.add("hidden"); pending = null; }
+
+  function inScoreBox() { return document.activeElement && document.activeElement.classList.contains("score"); }
+
+  // ---------- touch devices: on-screen buttons instead of keys ----------
+  var TOUCH_KEY = "fairDinkum.touchButtons";
+  var touchDetected = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  function touchPref() {
+    try { var v = localStorage.getItem(TOUCH_KEY); if (v === "1") return true; if (v === "0") return false; } catch (e) {}
+    return touchDetected;
+  }
+  function applyTouch(on) {
+    document.body.classList.toggle("touch", on);
+    $("touchBtns").checked = on;
+    $("touchHint").textContent = touchDetected ? "This looks like a touch-screen device, so buttons are on." :
+      "Turn on to show Back / Next / Players / End buttons, e.g. on a tablet.";
+    if (!$("run").classList.contains("hidden")) render();
+  }
+
+  // ---------- keyboard ----------
+  document.addEventListener("keydown", function (e) {
+    if (!$("editOverlay").classList.contains("hidden")) {
+      if (e.key === "Escape") { e.preventDefault(); closeEdit(); }
+      else if (e.key === "Enter" && document.activeElement === $("addName")) { e.preventDefault(); addPending(); }
+      return;
+    }
+    if ($("run").classList.contains("hidden")) return;
+    if (e.key === "F1" || ((e.key === "l" || e.key === "L") && !inScoreBox())) {
+      e.preventDefault();
+      if (!session.scoring) { toast("Scoring is off for this session."); return; }
+      if ($("board").classList.contains("hidden")) openBoard(); else closeBoard();
+      return;
+    }
+    if (!$("board").classList.contains("hidden")) {
+      if (e.key === "Escape") { e.preventDefault(); closeBoard(); }
+      return;
+    }
+    var inScore = document.activeElement && document.activeElement.classList.contains("score");
+    if (inScore) {
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        var boxes = Array.prototype.slice.call(document.querySelectorAll(".score"));
+        var i = boxes.indexOf(document.activeElement) + (e.shiftKey ? -1 : 1);
+        if (i >= 0 && i < boxes.length) { boxes[i].focus(); boxes[i].select(); } else document.activeElement.blur();
+        return;
+      }
+      if (e.key === "Escape") { e.preventDefault(); document.activeElement.blur(); return; }
+      if (e.key === "Backspace" || e.key === "Delete" || /^[0-9]$/.test(e.key) ||
+          e.key === "ArrowLeft" || e.key === "ArrowRight") return;   // normal editing
+      if (e.key === " ") { e.preventDefault(); document.activeElement.blur(); if (!e.repeat) next(); return; }
+      e.preventDefault(); return;
+    }
+    if (e.key === " " || e.code === "Space") { e.preventDefault(); if (!e.repeat) next(); }
+    else if (e.key === "Backspace") { e.preventDefault(); if (!e.repeat) prev(); }
+    else if (e.key === "Escape") { e.preventDefault(); leaveRun(); }
+    else if (e.key === "e" || e.key === "E") { e.preventDefault(); openEdit(); }
+  });
+
+  // ---------- wiring ----------
+  Array.prototype.forEach.call($("modeSeg").children, function (b) {
+    b.addEventListener("click", function () { setMode(b.dataset.mode); });
+  });
+  $("courtMinus").addEventListener("click", function () { setCourtCount(settings.courtCount - 1); });
+  $("courtPlus").addEventListener("click", function () { setCourtCount(settings.courtCount + 1); });
+  $("courtCount").addEventListener("change", function (e) { setCourtCount(e.target.value); });
+  $("groupPick").addEventListener("change", function (e) { sel.group = e.target.value; saveSel(); renderPicker(); });
+  $("tickAll").addEventListener("click", function () { listedPlayers().forEach(function (p) { sel.ids[p.id] = true; }); saveSel(); renderPicker(); });
+  $("untickAll").addEventListener("click", function () { listedPlayers().forEach(function (p) { untick(p.id); }); saveSel(); renderPicker(); });
+  $("guestAdd").addEventListener("click", addGuest);
+  $("guestName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addGuest(); } });
+  $("openManage").addEventListener("click", openManage);
+  $("manageDone").addEventListener("click", closeManage);
+  $("addPlayer").addEventListener("click", addPlayer);
+  $("newPlayer").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addPlayer(); } });
+  $("addGroup").addEventListener("click", addGroup);
+  $("gdAdd").addEventListener("click", gdAddGroup);
+  $("gpBack").addEventListener("click", closeGroupPage);
+  $("delAllPlayers").addEventListener("click", deleteAllPlayers);
+  $("delAllGroups").addEventListener("click", deleteAllGroups);
+  $("importNames").addEventListener("click", function () { $("namesFile").value = ""; $("namesFile").click(); });
+  $("namesFile").addEventListener("change", function (e) { if (e.target.files[0]) importNamesFile(e.target.files[0]); });
+  $("xlHeading").addEventListener("change", renderXl);
+  $("xlGroup").addEventListener("change", function () {
+    $("xlNewGroup").classList.toggle("hidden", $("xlGroup").value !== "__new");
+    if ($("xlGroup").value === "__new") $("xlNewGroup").focus();
+    renderXl();
+  });
+  $("xlCancel").addEventListener("click", closeXl);
+  $("xlGo").addEventListener("click", doXlImport);
+  $("xlDialog").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); closeXl(); } });
+  $("gpAdd").addEventListener("click", groupPageAdd);
+  $("gpAddName").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); groupPageAdd(); }
+    if (e.key === "Escape") { e.preventDefault(); closeGroupPage(); }
+  });
+  $("gdNew").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); gdAddGroup(); } });
+  $("gdDone").addEventListener("click", closeGroupDialog);
+  $("groupDialog").addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); closeGroupDialog(); }
+    if (e.key === "Enter" && e.target.id !== "gdNew") { e.preventDefault(); closeGroupDialog(); }
+  });
+  $("newGroup").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addGroup(); } });
+  $("pSearch").addEventListener("input", function (e) { mg.search = e.target.value; renderPlayersList(); });
+  $("chooseFolder2").addEventListener("click", chooseFolder);
+  $("exportDb").addEventListener("click", exportDb);
+  $("importDb").addEventListener("click", function () { $("importFile").value = ""; $("importFile").click(); });
+  $("importFile").addEventListener("change", function (e) { if (e.target.files[0]) importDb(e.target.files[0]); });
+  // Write any pending change straight away if the window is being hidden or closed.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden" && saveTimer) { clearTimeout(saveTimer); saveTimer = null; saving = saving.then(flush); }
+  });
+  $("startBtn").addEventListener("click", startSession);
+  $("schedNew").addEventListener("click", function () { if (canEdit()) startEdit(null); });
+  $("ebSave").addEventListener("click", saveEdit);
+  ["ebName", "ebWhen"].forEach(function (id) { $(id).addEventListener("input", function () { $("ebErrors").textContent = ""; }); });
+  $("ebName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); saveEdit(); } });
+  $("ebCancel").addEventListener("click", endEdit);
+  $("finishBtn").addEventListener("click", finishSession);
+  $("keepScore").addEventListener("change", function (e) { settings.keepScore = e.target.checked; persist(); });
+  $("touchBtns").addEventListener("change", function (e) {
+    try { localStorage.setItem(TOUCH_KEY, e.target.checked ? "1" : "0"); } catch (x) {}
+    applyTouch(e.target.checked);
+  });
+  applyTouch(touchPref());
+  $("tbPrev").addEventListener("click", function () { prev(); });
+  $("tbNext").addEventListener("click", function () { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); next(); });
+  $("tbPlayers").addEventListener("click", openEdit);
+  $("tbBoard").addEventListener("click", openBoard);
+  $("tbBoardClose").addEventListener("click", closeBoard);
+  $("tbEnd").addEventListener("click", leaveRun);
+  $("resumeBtn").addEventListener("click", function () { view = session.rounds.length - 1; enterRun(); });
+  $("addBtn").addEventListener("click", addPending);
+  $("editApply").addEventListener("click", applyEdit);
+  $("editCancel").addEventListener("click", closeEdit);
+  window.addEventListener("beforeunload", function (e) {
+    if (!inExe && session && session.rounds.length) { e.preventDefault(); e.returnValue = ""; }
+  });
+  // On phones the on-screen keyboard shrinks the window. Redrawing then would replace the
+  // score box being typed in and close the keyboard, so wait until typing has finished.
+  var pendingFit = false;
+  window.addEventListener("resize", function () {
+    if ($("run").classList.contains("hidden")) return;
+    if (inScoreBox()) { pendingFit = true; return; }
+    render();
+  });
+  document.addEventListener("focusout", function (e) {
+    if (!pendingFit || !e.target.classList || !e.target.classList.contains("score")) return;
+    setTimeout(function () {
+      if (pendingFit && !inScoreBox() && !$("run").classList.contains("hidden")) { pendingFit = false; render(); }
+    }, 150);
+  });
+
+  // ---------- boot ----------
+  hostLoad().then(function (txt) {
+    try {
+      if (txt) {
+        var s = JSON.parse(txt);
+        if (s && s.players) settings = Object.assign(settings, s);
+      }
+    } catch (e) {}
+    $("courtCount").value = settings.courtCount;
+    $("keepScore").checked = !!settings.keepScore;
+    loadSel();
+    return initDb();
+  }).then(function () {
+    renderCourtLabels();
+    setMode(settings.mode || "doubles");
+  }).then(function () { dbReady = true; refreshAll(); }, function (e) { dbReady = true; refreshAll(); toast("Couldn't open the player database: " + (e && e.message || e)); });
+})();
+</script>
+</body>
+</html>
