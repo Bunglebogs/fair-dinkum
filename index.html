@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fair Dinkum</title>
+<meta name="description" content="Pickleball session organiser: fair court, partner and sit-out rotation, scoring and scheduling.">
+<meta name="theme-color" content="#d7f23a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   :root {
     --bg: #eef1f4;
@@ -242,6 +247,9 @@
   body.editing #schedCard, body.editing #resumeBox, body.editing #startActions { display: none !important; }
   .runname { font-size: 2.6vh; color: var(--muted); font-weight: 600; align-self: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 
+  .footer { max-width: 1200px; margin-top: 22px; font-size: 13px; color: var(--muted); }
+  .footer a { color: var(--muted); }
+
   /* ---------- Touch devices ---------- */
   body:not(.touch) .touchonly { display: none !important; }
   body.touch .keysonly { display: none !important; }
@@ -377,6 +385,7 @@
       </div>
     </div>
   </div>
+  <div class="footer"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> · your data stays on this device</div>
 </div>
 
 <!-- ================= PLAYERS & GROUPS ================= -->
@@ -2423,6 +2432,11 @@
       if (pendingFit && !inScoreBox() && !$("run").classList.contains("hidden")) { pendingFit = false; render(); }
     }, 150);
   });
+
+  // ---------- offline support / installable app (only when served from a website) ----------
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
 
   // ---------- boot ----------
   hostLoad().then(function (txt) {
