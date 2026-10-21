@@ -253,6 +253,9 @@
   /* ---------- Kiosk mode ---------- */
   html.kiosk .nokiosk { display: none !important; }
   .kioskhow { font-size: 14px; line-height: 1.5; padding-left: 20px; margin: 12px 0 8px; }
+  .kioskhow li { margin-bottom: 6px; }
+  .kiosklink { display: flex; gap: 8px; }
+  .kiosklink input { flex: 1; width: auto; font-size: 14px; }
   .kioskwarn { font-size: 13px; color: #7a4a00; background: #fff1d6; border: 1px solid #e8c27a; border-radius: 8px; padding: 8px 12px; }
 
   /* ---------- Touch devices ---------- */
@@ -477,21 +480,22 @@
 
 <!-- ================= KIOSK LINK ================= -->
 <div id="kioskDialog" class="overlay hidden">
-  <div class="dialog" style="width:min(720px,94vw)">
+  <div class="dialog" style="width:min(740px,94vw)">
     <header>Kiosk link</header>
-    <div class="sub" id="kioskSummary"></div>
+    <div class="sub">A short link for the kiosk laptop. Your player list goes on the Fair Dinkum website as a scrambled file that only this link can unlock.</div>
     <div style="padding:12px 22px 0">
-      <textarea id="kioskUrl" readonly style="min-height:110px;font-size:13px;word-break:break-all"></textarea>
+      <div class="kiosklink"><input type="text" id="kioskUrl" readonly><button class="btn primary sm" id="kioskCopy">Copy link</button></div>
       <ol class="kioskhow">
-        <li>Copy this link.</li>
-        <li>On the kiosk laptop: <b>Settings › Accounts › Other users › Kiosk</b>, choose <b>Microsoft Edge</b> › <b>As a digital sign or interactive display</b>, and paste the link as the web address.</li>
-        <li>When your player list changes, make a new link here and paste it into the kiosk settings again.</li>
+        <li><b>Download the kiosk file</b> (below). It holds your current <span id="kioskCounts"></span>, scrambled.</li>
+        <li><b>Upload it to GitHub:</b> open <a href="https://github.com/Bunglebogs/fair-dinkum/upload/main/kiosk" target="_blank" rel="noopener">the kiosk folder upload page</a>, drag the file in and click <b>Commit changes</b>. (Or send it to Claude to publish.) It's live a minute or two later.</li>
+        <li><b>Set up the kiosk</b> once: <b>Settings › Accounts › Other users › Kiosk</b> › <b>Microsoft Edge</b> › <b>As a digital sign or interactive display</b>, and paste the link above as the web address.</li>
       </ol>
-      <div class="kioskwarn">The link contains your players' names. Keep it to the kiosk settings; don't post it publicly.</div>
+      <div class="kioskwarn">The link never changes. When your player list changes, just repeat steps 1 and 2 (the new file replaces the old one); the kiosk picks it up next time it starts. Keep the link private: anyone with it can read the list.</div>
+      <div style="margin-top:8px"><button class="linkbtn" id="kioskReset">Start again with a new link…</button></div>
     </div>
     <footer>
       <button class="btn secondary" id="kioskClose">Close</button>
-      <button class="btn primary" id="kioskCopy">Copy link</button>
+      <button class="btn primary" id="kioskDownload">Download kiosk file</button>
     </footer>
   </div>
 </div>
@@ -802,8 +806,11 @@
   // Kiosk mode: opened with a link ending "#kiosk=..." (made under Players & groups › Kiosk link).
   // The link carries the player list; storage keys are kept separate from normal use, and the
   // buttons that open Windows file dialogs are hidden so nobody can browse the computer's files.
-  var KIOSK = /^#kiosk(=|$)/.test(location.hash);
-  var KIOSK_DATA = KIOSK ? location.hash.replace(/^#kiosk=?/, "") : "";
+  // Short kiosk links look like "#k=<file id>.<key>": the player list is in an encrypted file
+  // (kiosk/<file id>.json on the website) and only this link holds the key to read it.
+  var KIOSK_SHORT = /^#k=([a-z0-9]{8,32})\.([A-Za-z0-9_-]{16,64})$/.exec(location.hash);
+  var KIOSK = !!KIOSK_SHORT || /^#kiosk(=|$)/.test(location.hash);
+  var KIOSK_DATA = KIOSK && !KIOSK_SHORT ? location.hash.replace(/^#kiosk=?/, "") : "";
   var KP = KIOSK ? "fairDinkum.kiosk." : "";
   if (KIOSK) document.documentElement.classList.add("kiosk");
   var $ = function (id) { return document.getElementById(id); };
@@ -1026,7 +1033,9 @@
           guests: (x.guests || []).map(String),
           pairs: (x.pairs || []).filter(function (pr) { return Array.isArray(pr) && pr.length === 2; }).map(function (pr) { return pr.map(String); }) };
       });
-    return { version: 1, players: players, groups: groups, sessions: sessions };
+    var out = { version: 1, players: players, groups: groups, sessions: sessions };
+    if (d.kiosk && /^[a-z0-9]{8,32}$/.test(d.kiosk.id) && /^[A-Za-z0-9_-]{16,64}$/.test(d.kiosk.key)) out.kiosk = { id: d.kiosk.id, key: d.kiosk.key };
+    return out;
   }
   function dbText() { return JSON.stringify(db, null, 2); }
   function mirror() { try { localStorage.setItem(MIRROR_KEY, JSON.stringify(db)); } catch (e) {} }
@@ -1156,16 +1165,42 @@
     var s = atob(t), u8 = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
     return u8;
   }
-  async function packKiosk(d) {
-    var json = JSON.stringify({ v: 1, players: d.players, groups: d.groups, sessions: d.sessions });
-    var stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
-    return "1." + b64urlEncode(new Uint8Array(await new Response(stream).arrayBuffer()));
-  }
   async function unpackKiosk(t) {
     var m = /^1\.(.+)$/.exec(t); if (!m) throw new Error("not a Fair Dinkum kiosk link");
     var stream = new Blob([b64urlDecode(m[1])]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
     return normaliseDb(JSON.parse(await new Response(stream).text()));
   }
+  // ---- encrypted kiosk file (AES-GCM; the key never leaves the kiosk link) ----
+  function newKiosk() {
+    var idb = crypto.getRandomValues(new Uint8Array(6)), id = "";
+    idb.forEach(function (x) { id += ("0" + x.toString(16)).slice(-2); });
+    return { id: id, key: b64urlEncode(crypto.getRandomValues(new Uint8Array(16))) };
+  }
+  async function kioskKey(k) { return crypto.subtle.importKey("raw", b64urlDecode(k), "AES-GCM", false, ["encrypt", "decrypt"]); }
+  async function makeKioskFile(d, k) {
+    var json = JSON.stringify({ v: 1, players: d.players, groups: d.groups, sessions: d.sessions });
+    var packed = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer();
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, await kioskKey(k.key), packed);
+    return JSON.stringify({ fairDinkumKiosk: 1, iv: b64urlEncode(iv), data: b64urlEncode(new Uint8Array(ct)) });
+  }
+  async function readKioskFile(text, key) {
+    var f = JSON.parse(text);
+    if (!f || f.fairDinkumKiosk !== 1) throw new Error("format");
+    var pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64urlDecode(f.iv) }, await kioskKey(key), b64urlDecode(f.data));
+    var stream = new Blob([pt]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return normaliseDb(JSON.parse(await new Response(stream).text()));
+  }
+  async function loadKioskFile() {
+    var id = KIOSK_SHORT[1], key = KIOSK_SHORT[2], res;
+    try { res = await fetch("kiosk/" + id + ".json?t=" + Date.now(), { cache: "no-store" }); }
+    catch (e) { throw new Error("Couldn't reach the Fair Dinkum website to load the player list. Check the internet connection, then restart the kiosk."); }
+    if (res.status === 404) throw new Error("The kiosk file (kiosk/" + id + ".json) isn't on the website yet. Upload it from Players & groups › Kiosk link on your own computer.");
+    if (!res.ok) throw new Error("The website didn't return the player list (error " + res.status + "). Try restarting the kiosk.");
+    try { return await readKioskFile(await res.text(), key); }
+    catch (e) { throw new Error("The kiosk file on the website doesn't match this link. Download a fresh kiosk file from the computer that made the link and upload it again."); }
+  }
+
   var KIOSK_BASE = "https://bunglebogs.github.io/fair-dinkum/";
   function kioskBase() { return /^https?:$/.test(location.protocol) ? location.href.split("#")[0].split("?")[0] : KIOSK_BASE; }
 
@@ -1174,7 +1209,10 @@
       // The list comes from the link; edits last until the kiosk's browser restarts.
       store.fsApi = false; store.state = "kiosk";
       try { var km = localStorage.getItem(MIRROR_KEY); if (km) { db = normaliseDb(JSON.parse(km)); return; } } catch (e) {}
-      if (KIOSK_DATA) {
+      if (KIOSK_SHORT) {
+        try { db = await loadKioskFile(); mirror(); }
+        catch (e) { store.kioskError = e.message; toast(e.message); }
+      } else if (KIOSK_DATA) {
         try { db = await unpackKiosk(KIOSK_DATA); mirror(); }
         catch (e) { toast("This kiosk link looks damaged or incomplete, so its player list couldn't be loaded. Make a new kiosk link under Players & groups."); }
       }
@@ -1221,7 +1259,9 @@
   function renderDbStatus() {
     var html, cls = "";
     var st = store.state;
-    if (st === "kiosk") {
+    if (st === "kiosk" && store.kioskError) {
+      cls = "bad"; html = "<span class='grow'>" + esc(store.kioskError) + "</span>";
+    } else if (st === "kiosk") {
       html = "<span class='grow'>Kiosk mode · player list from the kiosk link · changes last until the app restarts.</span>";
     } else if (st === "ok") {
       html = "<span class='grow'>Player database: folder <b>“" + esc(store.dir.name) + "”</b> · players.json" +
@@ -1984,17 +2024,31 @@
     toast("Session finished.", true);
   }
 
-  async function openKioskDialog() {
+  function kioskUrl() { return kioskBase() + "#k=" + db.kiosk.id + "." + db.kiosk.key; }
+  function openKioskDialog() {
+    if (!canEdit()) return;
+    if (!db.kiosk) { db.kiosk = newKiosk(); saveDb(); }
+    $("kioskUrl").value = kioskUrl();
+    var pl = function (n, w) { return n + " " + w + (n === 1 ? "" : "s"); };
+    $("kioskCounts").textContent = pl(db.players.length, "player") + ", " + pl(db.groups.length, "group") + " and " + pl(db.sessions.length, "scheduled session");
+    $("kioskDialog").classList.remove("hidden");
+    $("kioskUrl").focus(); $("kioskUrl").select();
+  }
+  async function downloadKioskFile() {
     try {
-      var url = kioskBase() + "#kiosk=" + await packKiosk(db);
-      $("kioskUrl").value = url;
-      $("kioskSummary").textContent = "Opens Fair Dinkum in kiosk mode with your " + db.players.length + " player" +
-        (db.players.length === 1 ? "" : "s") + ", " + db.groups.length + " group" + (db.groups.length === 1 ? "" : "s") +
-        " and " + db.sessions.length + " scheduled session" + (db.sessions.length === 1 ? "" : "s") +
-        ". In kiosk mode the folder, import and export buttons are hidden.";
-      $("kioskDialog").classList.remove("hidden");
-      $("kioskUrl").focus(); $("kioskUrl").select();
-    } catch (e) { toast("Couldn't make the kiosk link: " + (e && e.message || e)); }
+      var text = await makeKioskFile(db, db.kiosk);
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+      a.download = db.kiosk.id + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      toast("Kiosk file " + db.kiosk.id + ".json downloaded. Now upload it to GitHub (step 2).", true);
+    } catch (e) { toast("Couldn't make the kiosk file: " + (e && e.message || e)); }
+  }
+  function resetKiosk() {
+    if (!confirm("Make a brand-new kiosk link?\n\nThe current link will stop working: you'll need to put the new link into the kiosk settings and upload a new kiosk file.")) return;
+    db.kiosk = newKiosk(); saveDb(); openKioskDialog();
+    toast("New kiosk link made. Download and upload the new kiosk file, then update the kiosk settings.", true);
   }
   function copyKiosk() {
     var t = $("kioskUrl"); t.focus(); t.select();
@@ -2448,6 +2502,8 @@
   $("gpBack").addEventListener("click", closeGroupPage);
   $("kioskLinkBtn").addEventListener("click", openKioskDialog);
   $("kioskCopy").addEventListener("click", copyKiosk);
+  $("kioskDownload").addEventListener("click", downloadKioskFile);
+  $("kioskReset").addEventListener("click", resetKiosk);
   $("kioskClose").addEventListener("click", function () { $("kioskDialog").classList.add("hidden"); });
   $("kioskDialog").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); $("kioskDialog").classList.add("hidden"); } });
   $("delAllPlayers").addEventListener("click", deleteAllPlayers);
