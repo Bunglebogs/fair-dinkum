@@ -250,6 +250,11 @@
   .footer { max-width: 1200px; margin-top: 22px; font-size: 13px; color: var(--muted); }
   .footer a { color: var(--muted); }
 
+  /* ---------- Kiosk mode ---------- */
+  html.kiosk .nokiosk { display: none !important; }
+  .kioskhow { font-size: 14px; line-height: 1.5; padding-left: 20px; margin: 12px 0 8px; }
+  .kioskwarn { font-size: 13px; color: #7a4a00; background: #fff1d6; border: 1px solid #e8c27a; border-radius: 8px; padding: 8px 12px; }
+
   /* ---------- Touch devices ---------- */
   body:not(.touch) .touchonly { display: none !important; }
   body.touch .keysonly { display: none !important; }
@@ -385,7 +390,7 @@
       </div>
     </div>
   </div>
-  <div class="footer"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> · your data stays on this device</div>
+  <div class="footer nokiosk"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> · your data stays on this device</div>
 </div>
 
 <!-- ================= PLAYERS & GROUPS ================= -->
@@ -395,10 +400,11 @@
   <div class="mtools">
     <div class="dbline" id="dbStatus2"></div>
     <div class="addrow" style="margin-top:8px">
-      <button class="btn secondary sm" id="chooseFolder2">Change database folder…</button>
-      <button class="btn secondary sm" id="exportDb">Export backup…</button>
-      <button class="btn secondary sm" id="importDb">Import backup…</button>
-      <button class="btn secondary sm" id="importNames">Import names from Excel…</button>
+      <button class="btn secondary sm nokiosk" id="chooseFolder2">Change database folder…</button>
+      <button class="btn secondary sm nokiosk" id="exportDb">Export backup…</button>
+      <button class="btn secondary sm nokiosk" id="importDb">Import backup…</button>
+      <button class="btn secondary sm nokiosk" id="importNames">Import names from Excel…</button>
+      <button class="btn secondary sm nokiosk" id="kioskLinkBtn">Kiosk link…</button>
       <input type="file" id="namesFile" accept=".xlsx,.csv,.txt" class="hidden">
       <input type="file" id="importFile" accept=".json,application/json" class="hidden">
     </div>
@@ -465,6 +471,27 @@
       <div class="errors" id="xlErrors"></div>
       <button class="btn secondary" id="xlCancel">Cancel</button>
       <button class="btn primary" id="xlGo">Import</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= KIOSK LINK ================= -->
+<div id="kioskDialog" class="overlay hidden">
+  <div class="dialog" style="width:min(720px,94vw)">
+    <header>Kiosk link</header>
+    <div class="sub" id="kioskSummary"></div>
+    <div style="padding:12px 22px 0">
+      <textarea id="kioskUrl" readonly style="min-height:110px;font-size:13px;word-break:break-all"></textarea>
+      <ol class="kioskhow">
+        <li>Copy this link.</li>
+        <li>On the kiosk laptop: <b>Settings › Accounts › Other users › Kiosk</b>, choose <b>Microsoft Edge</b> › <b>As a digital sign or interactive display</b>, and paste the link as the web address.</li>
+        <li>When your player list changes, make a new link here and paste it into the kiosk settings again.</li>
+      </ol>
+      <div class="kioskwarn">The link contains your players' names. Keep it to the kiosk settings; don't post it publicly.</div>
+    </div>
+    <footer>
+      <button class="btn secondary" id="kioskClose">Close</button>
+      <button class="btn primary" id="kioskCopy">Copy link</button>
     </footer>
   </div>
 </div>
@@ -772,13 +799,20 @@
 (function () {
   "use strict";
   var E = window.PBEngine;
+  // Kiosk mode: opened with a link ending "#kiosk=..." (made under Players & groups › Kiosk link).
+  // The link carries the player list; storage keys are kept separate from normal use, and the
+  // buttons that open Windows file dialogs are hidden so nobody can browse the computer's files.
+  var KIOSK = /^#kiosk(=|$)/.test(location.hash);
+  var KIOSK_DATA = KIOSK ? location.hash.replace(/^#kiosk=?/, "") : "";
+  var KP = KIOSK ? "fairDinkum.kiosk." : "";
+  if (KIOSK) document.documentElement.classList.add("kiosk");
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- host bridge ----------
   // In the Windows exe these are provided by the Go host. In a plain browser we
   // fall back to localStorage for settings and the Fullscreen API.
   var inExe = typeof window.saveSettings === "function";
-  var LS_KEY = "pickleballRotator.settings";
+  var LS_KEY = KIOSK ? KP + "settings" : "pickleballRotator.settings";
   function hostSave(txt) {
     if (inExe) { try { return Promise.resolve(window.saveSettings(txt)); } catch (e) { return Promise.resolve(null); } }
     try { localStorage.setItem(LS_KEY, txt); } catch (e) {}
@@ -936,7 +970,8 @@
   // the browser's storage as a safety net.
   // =====================================================================
   var DB_FILE = "players.json", BACKUP_DIR = "Backups", MAX_BACKUPS = 50, BACKUP_EVERY_MS = 5 * 60 * 1000;
-  var MIRROR_KEY = "fairDinkum.db", SEL_KEY = "fairDinkum.selection", MIGRATED_KEY = "fairDinkum.migrated";
+  var MIRROR_KEY = KIOSK ? KP + "db" : "fairDinkum.db", SEL_KEY = KIOSK ? KP + "selection" : "fairDinkum.selection",
+      MIGRATED_KEY = KIOSK ? KP + "migrated" : "fairDinkum.migrated";
   var db = { version: 1, players: [], groups: [], sessions: [] };
   var store = { fsApi: typeof window.showDirectoryPicker === "function", dir: null, state: "none", lastSaved: null, lastBackup: 0, error: "" };
   // state: none (no folder chosen) | reconnect (need permission again) | ok | error | local (browser can't save files)
@@ -1112,7 +1147,39 @@
     if (db.players.length) mirror();
   }
 
+  function b64urlEncode(u8) {
+    var s = ""; for (var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function b64urlDecode(t) {
+    t = t.replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "=";
+    var s = atob(t), u8 = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
+    return u8;
+  }
+  async function packKiosk(d) {
+    var json = JSON.stringify({ v: 1, players: d.players, groups: d.groups, sessions: d.sessions });
+    var stream = new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    return "1." + b64urlEncode(new Uint8Array(await new Response(stream).arrayBuffer()));
+  }
+  async function unpackKiosk(t) {
+    var m = /^1\.(.+)$/.exec(t); if (!m) throw new Error("not a Fair Dinkum kiosk link");
+    var stream = new Blob([b64urlDecode(m[1])]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return normaliseDb(JSON.parse(await new Response(stream).text()));
+  }
+  var KIOSK_BASE = "https://bunglebogs.github.io/fair-dinkum/";
+  function kioskBase() { return /^https?:$/.test(location.protocol) ? location.href.split("#")[0].split("?")[0] : KIOSK_BASE; }
+
   async function initDb() {
+    if (KIOSK) {
+      // The list comes from the link; edits last until the kiosk's browser restarts.
+      store.fsApi = false; store.state = "kiosk";
+      try { var km = localStorage.getItem(MIRROR_KEY); if (km) { db = normaliseDb(JSON.parse(km)); return; } } catch (e) {}
+      if (KIOSK_DATA) {
+        try { db = await unpackKiosk(KIOSK_DATA); mirror(); }
+        catch (e) { toast("This kiosk link looks damaged or incomplete, so its player list couldn't be loaded. Make a new kiosk link under Players & groups."); }
+      }
+      return;
+    }
     try { var m = localStorage.getItem(MIRROR_KEY); if (m) db = normaliseDb(JSON.parse(m)); } catch (e) {}
     migrateOldLists();
     if (!store.fsApi) { store.state = "local"; return; }
@@ -1154,7 +1221,9 @@
   function renderDbStatus() {
     var html, cls = "";
     var st = store.state;
-    if (st === "ok") {
+    if (st === "kiosk") {
+      html = "<span class='grow'>Kiosk mode · player list from the kiosk link · changes last until the app restarts.</span>";
+    } else if (st === "ok") {
       html = "<span class='grow'>Player database: folder <b>“" + esc(store.dir.name) + "”</b> · players.json" +
         (store.lastSaved ? " · saved " + store.lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "") + "</span>";
     } else if (st === "none") {
@@ -1915,6 +1984,25 @@
     toast("Session finished.", true);
   }
 
+  async function openKioskDialog() {
+    try {
+      var url = kioskBase() + "#kiosk=" + await packKiosk(db);
+      $("kioskUrl").value = url;
+      $("kioskSummary").textContent = "Opens Fair Dinkum in kiosk mode with your " + db.players.length + " player" +
+        (db.players.length === 1 ? "" : "s") + ", " + db.groups.length + " group" + (db.groups.length === 1 ? "" : "s") +
+        " and " + db.sessions.length + " scheduled session" + (db.sessions.length === 1 ? "" : "s") +
+        ". In kiosk mode the folder, import and export buttons are hidden.";
+      $("kioskDialog").classList.remove("hidden");
+      $("kioskUrl").focus(); $("kioskUrl").select();
+    } catch (e) { toast("Couldn't make the kiosk link: " + (e && e.message || e)); }
+  }
+  function copyKiosk() {
+    var t = $("kioskUrl"); t.focus(); t.select();
+    var done = function () { toast("Kiosk link copied.", true); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(done, function () { document.execCommand("copy"); done(); });
+    else { document.execCommand("copy"); done(); }
+  }
+
   function refreshAll() {
     cleanSel(); saveSel();
     renderDbStatus();
@@ -2286,7 +2374,7 @@
   function inScoreBox() { return document.activeElement && document.activeElement.classList.contains("score"); }
 
   // ---------- touch devices: on-screen buttons instead of keys ----------
-  var TOUCH_KEY = "fairDinkum.touchButtons";
+  var TOUCH_KEY = KP ? KP + "touchButtons" : "fairDinkum.touchButtons";
   var touchDetected = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   function touchPref() {
     try { var v = localStorage.getItem(TOUCH_KEY); if (v === "1") return true; if (v === "0") return false; } catch (e) {}
@@ -2358,6 +2446,10 @@
   $("addGroup").addEventListener("click", addGroup);
   $("gdAdd").addEventListener("click", gdAddGroup);
   $("gpBack").addEventListener("click", closeGroupPage);
+  $("kioskLinkBtn").addEventListener("click", openKioskDialog);
+  $("kioskCopy").addEventListener("click", copyKiosk);
+  $("kioskClose").addEventListener("click", function () { $("kioskDialog").classList.add("hidden"); });
+  $("kioskDialog").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); $("kioskDialog").classList.add("hidden"); } });
   $("delAllPlayers").addEventListener("click", deleteAllPlayers);
   $("delAllGroups").addEventListener("click", deleteAllGroups);
   $("importNames").addEventListener("click", function () { $("namesFile").value = ""; $("namesFile").click(); });
