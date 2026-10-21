@@ -95,6 +95,10 @@
     padding: 0 1vw; min-height: 0; overflow: hidden; }
   .side .nm { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
   .side.win { box-shadow: inset 0 0 0 4px var(--ok); }
+  .side.pick { cursor: pointer; }
+  .side.pick:hover { filter: brightness(.96); }
+  .side .wtag { display: none; flex: none; align-self: center; font-weight: 800; color: var(--ok); font-size: 3.2vh; }
+  .side.win .wtag { display: block; }
   #courts .score { flex: none; align-self: center; width: 2.3em; min-width: 0; text-align: center; font-weight: 800; border-radius: 10px;
     background: #fff; color: var(--text); border: 3px solid var(--line); padding: .05em 0; outline: none; }
   #courts .score:focus { border-color: var(--ink); }
@@ -251,7 +255,7 @@
   .footer a { color: var(--muted); }
 
   /* ---------- Seeding ---------- */
-  #seededRow.off { opacity: .5; }
+  #seededRow.off, #ladderRow.off { opacity: .5; }
   .seedlist { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; max-height: 340px; overflow: auto; background: var(--panel); }
   .seedlist li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: grab; user-select: none; background: var(--panel); }
   .seedlist li:last-child { border-bottom: 0; }
@@ -362,6 +366,8 @@
         <div class="hint">Enter each court's score before moving to the next round. <b class="keysonly">F1</b><span class="keysonly"> or </span><b class="keysonly">L</b><span class="keysonly"> shows</span><span class="touchonly">The Leaderboard button shows</span> the leaderboard.</div>
         <label class="check" id="seededRow"><input type="checkbox" id="seeded"> Seeded session</label>
         <div class="hint" id="seededHint">Rank the players before you start. The best play together on the top court, and so on down; after every round they're re-ranked by win rate, then points margin per game. Needs <b>Keep score</b>.</div>
+        <label class="check" id="ladderRow"><input type="checkbox" id="ladder"> Ladder</label>
+        <div class="hint" id="ladderHint">Doubles only, with everyone playing (no sit-outs). Round 1 is random. After that, winners move up a court and losers move down; the two who arrive together split up and play against each other. Top-court winners and bottom-court losers stay put. Without <b>Keep score</b>, tap the winning pair on each court. Adding or removing a player during the session ends the ladder and switches to the normal rotation.</div>
         <label class="check"><input type="checkbox" id="touchBtns"> On-screen buttons during the session</label>
         <div class="hint" id="touchHint"></div>
       </div>
@@ -373,7 +379,7 @@
           <button id="courtPlus" title="More courts">+</button>
         </div>
         <div id="courtLabels" style="margin-top:6px"></div>
-        <div class="hint hidden" id="courtRankHint">Seeded session: the first court is the <b>top court</b> (best-ranked game), then the next, and so on. Rename or reorder the labels to match your courts.</div>
+        <div class="hint hidden" id="courtRankHint"><span id="courtRankWhat">Seeded session</span>: the first court is the <b>top court</b> (best-ranked game), then the next, and so on. Rename or reorder the labels to match your courts.</div>
       </div>
     </div>
 
@@ -874,7 +880,46 @@
     return round;
   }
 
+  // Ladder (doubles, everyone playing). winners[i] = "a" or "b" for the i-th match of
+  // the latest round (courts in order, top court first). Winners move up a court and
+  // losers down; top-court winners and bottom-court losers stay put. The two who arrive
+  // together are split so they play against each other; of the two ways to do that,
+  // the one with fewer repeat partnerships is used.
+  function ladderRound(s, winners) {
+    var last = s.rounds[s.rounds.length - 1], r = s.rounds.length;
+    var ms = last.matches.slice().sort(function (x, y) { return x.court - y.court; });
+    var n = ms.length, W = [], L = [];
+    ms.forEach(function (m, i) {
+      var aWon = winners[i] === "a";
+      W.push(aWon ? m.sideA : m.sideB); L.push(aWon ? m.sideB : m.sideA);
+    });
+    var groups = [];
+    for (var k = 0; k < n; k++) {
+      var P, Q;
+      if (n === 1) { P = W[0]; Q = L[0]; }
+      else if (k === 0) { P = W[0]; Q = W[1]; }
+      else if (k === n - 1) { P = L[k - 1]; Q = L[k]; }
+      else { P = L[k - 1]; Q = W[k + 1]; }
+      groups.push([P, Q]);
+    }
+    var cost = function (x, y) {
+      var kk = key(x, y), c = s.partner[kk] || 0;
+      return c * 100 + (c && s.partnerLast[kk] !== undefined ? 50 / (1 + r - s.partnerLast[kk]) : 0);
+    };
+    var matches = groups.map(function (g, k) {
+      var P = g[0], Q = g[1];
+      var c1 = cost(P[0], Q[0]) + cost(P[1], Q[1]), c2 = cost(P[0], Q[1]) + cost(P[1], Q[0]);
+      var straight = c1 < c2 || (c1 === c2 && s.rng() < 0.5);
+      return { court: ms[k].court, sideA: [P[0], straight ? Q[0] : Q[1]], sideB: [P[1], straight ? Q[1] : Q[0]] };
+    });
+    var round = { index: r, matches: matches, sitting: [], ladder: true };
+    record(s, round);
+    s.rounds.push(round);
+    return round;
+  }
+
   var api = {
+    ladderRound: ladderRound,
     createSession: createSession, addUnit: addUnit, removeUnit: removeUnit,
     restoreUnit: restoreUnit, nextRound: nextRound, activeIds: activeIds,
     capacity: capacity, unitsPerCourt: unitsPerCourt, key: key
@@ -941,7 +986,7 @@
   });
 
   // ---------- state ----------
-  var settings = { mode: "doubles", keepScore: false, seeded: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
+  var settings = { mode: "doubles", keepScore: false, seeded: false, ladder: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
   var session = null;   // engine session
   var view = 0;         // index of round being shown
 
@@ -1029,6 +1074,11 @@
       units.sort(function (x, y) { return (pos[x.key] === undefined ? 1e9 : pos[x.key]) - (pos[y.key] === undefined ? 1e9 : pos[y.key]); });
     }
     var cap = describeCapacity(units.length, settings.courtCount, settings.mode);
+    if (ladderOn() && units.length) {
+      var need = Math.ceil(units.length / 4);
+      if (units.length % 4) errors.push("Ladder needs everyone playing, so the number of players must be a multiple of 4 (you have " + units.length + ").");
+      else if (need > settings.courtCount) errors.push("Ladder needs everyone playing: " + units.length + " players need " + need + " courts.");
+    }
     $("summary").innerHTML = cap.html;
     $("errors").innerHTML = errors.map(esc).join("<br>");
     var ok = cap.ok && !errors.length;
@@ -1117,7 +1167,7 @@
           mode: ["doubles", "singles", "teams"].indexOf(x.mode) >= 0 ? x.mode : "doubles",
           courtCount: Math.max(1, Math.min(30, parseInt(x.courtCount, 10) || 1)),
           courtLabels: Array.isArray(x.courtLabels) ? x.courtLabels.map(String) : [],
-          keepScore: !!x.keepScore, seeded: !!x.seeded,
+          keepScore: !!x.keepScore, seeded: !!x.seeded, ladder: !!x.ladder,
           seed: (Array.isArray(x.seed) ? x.seed : []).map(String),
           playerIds: (x.playerIds || []).map(String).filter(function (m) { return ids[m]; }),
           guests: (x.guests || []).map(String),
@@ -1420,7 +1470,8 @@
   }
 
   // ---------- seeding ----------
-  function seededOn() { return !!(settings.keepScore && settings.seeded); }
+  function seededOn() { return !!(settings.keepScore && settings.seeded && !ladderOn()); }
+  function ladderOn() { return !!(settings.mode === "doubles" && settings.ladder); }
   // The things being ranked: players, or pairs in Teams mode (key "a+b").
   function unitKeys() {
     if (settings.mode === "teams") return sel.pairs.map(function (pr) { return pr[0] + "+" + pr[1]; });
@@ -1447,9 +1498,14 @@
   function renderSeed() {
     var on = seededOn();
     $("seedArea").classList.toggle("hidden", !on);
-    $("courtRankHint").classList.toggle("hidden", !on);
-    $("seededRow").classList.toggle("off", !settings.keepScore);
-    $("seeded").disabled = !settings.keepScore;
+    $("courtRankHint").classList.toggle("hidden", !on && !ladderOn());
+    $("courtRankWhat").textContent = ladderOn() ? "Ladder" : "Seeded session";
+    $("seededRow").classList.toggle("off", !settings.keepScore || ladderOn());
+    $("seeded").disabled = !settings.keepScore || ladderOn();
+    $("seeded").checked = !!settings.seeded && !ladderOn();
+    $("ladderRow").classList.toggle("off", settings.mode !== "doubles");
+    $("ladder").disabled = settings.mode !== "doubles";
+    $("ladder").checked = ladderOn();
     if (!on) return;
     syncSeed();
     var ol = $("seedList"); ol.innerHTML = "";
@@ -2072,7 +2128,7 @@
       var cnt = planCount(ss);
       dd.textContent = MODE_NAME[ss.mode] + " · " + cnt + " player" + (cnt === 1 ? "" : "s") +
         (ss.mode === "teams" ? " (" + ss.pairs.length + " pair" + (ss.pairs.length === 1 ? "" : "s") + ")" : "") +
-        " · " + ss.courtCount + " court" + (ss.courtCount === 1 ? "" : "s") + (ss.keepScore ? " · keeping score" : "");
+        " · " + ss.courtCount + " court" + (ss.courtCount === 1 ? "" : "s") + (ss.ladder && ss.mode === "doubles" ? " · ladder" : "") + (ss.keepScore ? " · keeping score" : "");
       info.appendChild(dd);
       row.appendChild(info);
       if (live) {
@@ -2097,7 +2153,7 @@
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function loadPlanIntoForm(ss) {
     settings.mode = ss.mode; settings.courtCount = ss.courtCount; settings.courtLabels = ss.courtLabels.slice(); settings.keepScore = ss.keepScore;
-    settings.seeded = !!ss.seeded; sel.seed = (ss.seed || []).slice();
+    settings.seeded = !!ss.seeded; sel.seed = (ss.seed || []).slice(); settings.ladder = !!ss.ladder;
     sel.ids = {}; ss.playerIds.forEach(function (id) { sel.ids[id] = true; });
     sel.guests = ss.guests.slice(); sel.pairs = clone(ss.pairs); sel.group = "all"; sel.pick = null;
   }
@@ -2146,7 +2202,7 @@
     rec.courtLabels = settings.courtLabels.slice(0, settings.courtCount); rec.keepScore = !!settings.keepScore;
     rec.playerIds = db.players.filter(function (p) { return sel.ids[p.id]; }).map(function (p) { return p.id; });
     rec.guests = sel.guests.slice(); rec.pairs = clone(sel.pairs);
-    rec.seeded = !!settings.seeded; syncSeed(); rec.seed = sel.seed.slice();
+    rec.seeded = !!settings.seeded; syncSeed(); rec.seed = sel.seed.slice(); rec.ladder = !!settings.ladder;
     saveDb();
     endEdit();
     toast("“" + name + "” saved for " + fmtWhen(when) + ".", true);
@@ -2180,7 +2236,7 @@
   function finishSession() {
     if (!session) return;
     var label = session.schedName ? "“" + session.schedName + "”" : "this session";
-    if (!confirm("Finish " + label + "? The rounds" + (session.scoring ? " and leaderboard" : "") +
+    if (!confirm("Finish " + label + "? The rounds" + (session.hasBoard ? " and leaderboard" : "") +
       " will be cleared" + (session.schedId ? " and it will be removed from Scheduled sessions" : "") + ".")) return;
     if (session.schedId) { db.sessions = db.sessions.filter(function (x) { return x.id !== session.schedId; }); saveDb(); }
     session = null;
@@ -2240,6 +2296,8 @@
     session = E.createSession({ mode: settings.mode, courts: courts, units: units });
     session.scoring = !!settings.keepScore;
     session.seeded = seededOn();
+    session.ladder = ladderOn();
+    session.hasBoard = session.scoring || session.ladder;
     session.schedId = launching ? launching.id : null;
     session.schedName = launching ? launching.name : null;
     computeDisplayNames(session);
@@ -2255,7 +2313,7 @@
     $("setup").classList.add("hidden");
     $("run").classList.remove("hidden");
     hostFull(true);
-    document.querySelectorAll(".scoreonly").forEach(function (x) { x.classList.toggle("hidden", !session.scoring); });
+    document.querySelectorAll(".scoreonly").forEach(function (x) { x.classList.toggle("hidden", !session.hasBoard); });
     render();
     // re-fit after the window has actually gone full screen
     setTimeout(function () { if (!inScoreBox()) render(); }, 150);
@@ -2316,7 +2374,7 @@
     $("roundNo").textContent = view + 1;
     $("tbPrev").disabled = view === 0;
     var v = $("viewing");
-    if (view < latest) { v.textContent = "Earlier round — latest is " + (latest + 1); v.classList.remove("hidden"); }
+    if (view < latest) { v.textContent = "Earlier round — latest is " + (latest + 1) + (session.ladder ? " (results locked)" : ""); v.classList.remove("hidden"); }
     else v.classList.add("hidden");
 
     var shape = gridShape(rd.matches.length);
@@ -2339,7 +2397,19 @@
             var n = document.createElement("div"); n.className = "name"; n.textContent = line; nm.appendChild(n);
           });
         });
-        if (session.scoring) s.appendChild(scoreBox(m, part[0]));
+        if (session.scoring) {
+          var sb = scoreBox(m, part[0]);
+          if (locked()) sb.readOnly = true;
+          s.appendChild(sb);
+        } else if (session.ladder || m.winner) {
+          var wt = document.createElement("div"); wt.className = "wtag"; wt.textContent = "WON"; s.appendChild(wt);
+          if (session.ladder && !locked()) {
+            s.classList.add("pick"); s.title = "Tap the winning pair";
+            (function (side) {
+              s.addEventListener("click", function () { m.winner = m.winner === side ? null : side; markScores(); });
+            })(part[0]);
+          }
+        }
         body.appendChild(s);
       });
       c.appendChild(lab); c.appendChild(body); box.appendChild(c);
@@ -2374,21 +2444,32 @@
     return m.score.a === m.score.b ? "tied" : "done";
   }
 
+  // Ladder: only the latest round's results can be changed.
+  function locked() { return !!(session.ladder && view < session.rounds.length - 1); }
+  // "a", "b" or null — from the scores when scoring, otherwise the tapped winner.
+  function winnerOf(m) {
+    if (session.scoring) return matchState(m) === "done" ? (m.score.a > m.score.b ? "a" : "b") : null;
+    return m.winner || null;
+  }
+
   // Highlight winners and tied (invalid) scores on the current round.
   function markScores() {
-    if (!session || !session.scoring) return;
+    if (!session || !session.hasBoard) return;
     var rd = session.rounds[view];
     document.querySelectorAll(".court").forEach(function (c, i) {
-      var m = rd.matches[i], st = matchState(m);
-      var a = c.querySelector(".side.a"), b = c.querySelector(".side.b");
-      a.classList.toggle("win", st === "done" && m.score.a > m.score.b);
-      b.classList.toggle("win", st === "done" && m.score.b > m.score.a);
+      var m = rd.matches[i], w = winnerOf(m), st = session.scoring ? matchState(m) : "";
+      c.querySelector(".side.a").classList.toggle("win", w === "a");
+      c.querySelector(".side.b").classList.toggle("win", w === "b");
       c.querySelectorAll(".score").forEach(function (x) { x.classList.toggle("bad", st === "tied"); });
     });
   }
 
   // Returns null if the round is complete, otherwise a message.
   function roundProblem(rd) {
+    if (!session.scoring) {
+      var nw = rd.matches.filter(function (m) { return !m.winner; }).length;
+      return nw ? "Tap the winning pair on " + (nw === 1 ? "1 more court" : nw + " more courts") + " before moving on." : null;
+    }
     var missing = 0, tied = 0;
     rd.matches.forEach(function (m) { var st = matchState(m); if (st === "missing") missing++; if (st === "tied") tied++; });
     if (tied) return "A score can't be a tie — check the court" + (tied > 1 ? "s" : "") + " marked in red.";
@@ -2424,11 +2505,13 @@
     });
     session.rounds.forEach(function (rd) {
       rd.matches.forEach(function (m) {
-        if (matchState(m) !== "done") return;
-        [[m.sideA, m.score.a, m.score.b], [m.sideB, m.score.b, m.score.a]].forEach(function (x) {
+        var w = winnerOf(m);
+        if (!w) return;
+        var sa = session.scoring ? m.score.a : 0, sb = session.scoring ? m.score.b : 0;
+        [[m.sideA, sa, sb, w === "a"], [m.sideB, sb, sa, w === "b"]].forEach(function (x) {
           x[0].forEach(function (id) {
             var r = t[id]; r.p++; r.pf += x[1]; r.pa += x[2];
-            if (x[1] > x[2]) r.w++; else r.l++;
+            if (x[3]) r.w++; else r.l++;
           });
         });
       });
@@ -2453,24 +2536,25 @@
 
   function openBoard() {
     var rows = standings();
-    $("boardRule").textContent = session.seeded ? "Ranked by win rate, then points margin per game" : "Ranked by wins, then points margin";
+    var pts = session.scoring;
+    $("boardRule").textContent = session.seeded ? "Ranked by win rate, then points margin per game" : pts ? "Ranked by wins, then points margin" : "Ranked by wins";
     var done = 0;
     session.rounds.forEach(function (rd) { if (!roundProblem(rd)) done++; });
     $("boardSub").textContent = done + " of " + session.rounds.length + " round" +
-      (session.rounds.length === 1 ? "" : "s") + " fully scored";
+      (session.rounds.length === 1 ? "" : "s") + (pts ? " fully scored" : " with results");
     var perCol = rows.length > 16 ? Math.ceil(rows.length / 2) : rows.length;
     var cols = $("boardCols"); cols.innerHTML = "";
     for (var c = 0; c * perCol < rows.length; c++) {
       var html = "<table><tr><th></th><th class='l'>" + (session.mode === "teams" ? "Team" : "Player") +
         "</th><th>Played</th><th>Won</th><th>Lost</th>" + (session.seeded ? "<th>Win %</th>" : "") +
-        "<th>For</th><th>Agst</th><th>Margin</th></tr>";
+        (pts ? "<th>For</th><th>Agst</th><th>Margin</th>" : "") + "</tr>";
       rows.slice(c * perCol, (c + 1) * perCol).forEach(function (r) {
         var shared = rows.filter(function (x) { return x.rank === r.rank; }).length > 1;
         html += "<tr" + (r.active ? "" : " class='gone'") + "><td class='rank'>" + (shared ? "=" : "") + r.rank +
           "</td><td class='l'>" + esc(r.name) + (r.active ? "" : " (left)") + "</td><td>" + r.p + "</td><td class='w'>" + r.w +
           "</td><td>" + r.l + "</td>" + (session.seeded ? "<td>" + (r.p ? Math.round(100 * r.w / r.p) + "%" : "–") + "</td>" : "") +
-          "<td>" + r.pf + "</td><td>" + r.pa + "</td><td class='" +
-          (r.m > 0 ? "pos" : r.m < 0 ? "neg" : "") + "'>" + (r.m > 0 ? "+" : "") + r.m + "</td></tr>";
+          (pts ? "<td>" + r.pf + "</td><td>" + r.pa + "</td><td class='" +
+          (r.m > 0 ? "pos" : r.m < 0 ? "neg" : "") + "'>" + (r.m > 0 ? "+" : "") + r.m + "</td>" : "") + "</tr>";
       });
       cols.innerHTML += html + "</table>";
     }
@@ -2536,6 +2620,15 @@
   }
 
   function next() {
+    if (session.ladder) {
+      if (view < session.rounds.length - 1) { view++; render(); return; }
+      var lp = roundProblem(session.rounds[view]);
+      if (lp) { toast(lp); if (session.scoring) focusFirstEmpty(); return; }
+      var ms = session.rounds[view].matches.slice().sort(function (x, y) { return x.court - y.court; });
+      E.ladderRound(session, ms.map(winnerOf));
+      view = session.rounds.length - 1; render();
+      return;
+    }
     if (session.scoring) {
       var prob = roundProblem(session.rounds[view]);
       if (prob) { toast(prob); focusFirstEmpty(); return; }
@@ -2604,13 +2697,20 @@
     if (activeAfter < E.unitsPerCourt(session.mode)) {
       $("editErrors").textContent = "That would leave too few to fill a court."; return;
     }
+    var changed = pending.adds.some(function (a) { return a.keep; }) ||
+      Object.keys(pending.toggles).some(function (id) { return pending.toggles[id] !== session.units[id].active; });
+    var endsLadder = session.ladder && changed;
+    if (endsLadder) {
+      if (!confirm("Changing players ends the ladder. From the next round, the normal rotation is used. Continue?")) return;
+      session.ladder = false;
+    }
     Object.keys(pending.toggles).forEach(function (id) {
       if (pending.toggles[id]) E.restoreUnit(session, id); else E.removeUnit(session, id);
     });
     pending.adds.forEach(function (a) { if (a.keep) E.addUnit(session, { name: a.name, members: a.members }); });
     computeDisplayNames(session);
     closeEdit();
-    toast("Player changes apply from the next new round.", true);
+    toast(endsLadder ? "Ladder ended. The normal rotation starts with the next new round." : "Player changes apply from the next new round.", true);
   }
   function closeEdit() { $("editOverlay").classList.add("hidden"); pending = null; }
 
@@ -2641,7 +2741,7 @@
     if ($("run").classList.contains("hidden")) return;
     if (e.key === "F1" || ((e.key === "l" || e.key === "L") && !inScoreBox())) {
       e.preventDefault();
-      if (!session.scoring) { toast("Scoring is off for this session."); return; }
+      if (!session.hasBoard) { toast("Scoring is off for this session."); return; }
       if ($("board").classList.contains("hidden")) openBoard(); else closeBoard();
       return;
     }
@@ -2737,7 +2837,8 @@
   $("ebCancel").addEventListener("click", endEdit);
   $("finishBtn").addEventListener("click", finishSession);
   $("keepScore").addEventListener("change", function (e) { settings.keepScore = e.target.checked; persist(); renderPicker(); });
-  $("seeded").addEventListener("change", function (e) { settings.seeded = e.target.checked; persist(); renderPicker(); });
+  $("seeded").addEventListener("change", function (e) { settings.seeded = e.target.checked; if (e.target.checked) settings.ladder = false; persist(); renderPicker(); });
+  $("ladder").addEventListener("change", function (e) { settings.ladder = e.target.checked; if (e.target.checked) settings.seeded = false; persist(); renderPicker(); });
   $("touchBtns").addEventListener("change", function (e) {
     try { localStorage.setItem(TOUCH_KEY, e.target.checked ? "1" : "0"); } catch (x) {}
     applyTouch(e.target.checked);
