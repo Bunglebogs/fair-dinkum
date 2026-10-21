@@ -250,6 +250,20 @@
   .footer { max-width: 1200px; margin-top: 22px; font-size: 13px; color: var(--muted); }
   .footer a { color: var(--muted); }
 
+  /* ---------- Seeding ---------- */
+  #seededRow.off { opacity: .5; }
+  .seedlist { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; max-height: 340px; overflow: auto; background: var(--panel); }
+  .seedlist li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: grab; user-select: none; background: var(--panel); }
+  .seedlist li:last-child { border-bottom: 0; }
+  .seedlist li.dragging { opacity: .4; }
+  .seedlist li.over-top { box-shadow: inset 0 3px 0 var(--ink); }
+  .seedlist li.over-bottom { box-shadow: inset 0 -3px 0 var(--ink); }
+  .seedlist .sr { width: 2em; text-align: right; font-weight: 800; color: var(--ink); }
+  .seedlist .sn { flex: 1; font-size: 15px; }
+  .seedlist .grip { color: var(--muted); font-size: 14px; letter-spacing: -2px; }
+  .seedlist button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; width: 30px; height: 28px; cursor: pointer; color: var(--text); }
+  .seedlist button:disabled { opacity: .3; cursor: default; }
+
   /* ---------- Kiosk mode ---------- */
   html.kiosk .nokiosk { display: none !important; }
   .kioskhow { font-size: 14px; line-height: 1.5; padding-left: 20px; margin: 12px 0 8px; }
@@ -346,6 +360,8 @@
         <div class="hint" id="modeHint"></div>
         <label class="check"><input type="checkbox" id="keepScore"> Keep score</label>
         <div class="hint">Enter each court's score before moving to the next round. <b class="keysonly">F1</b><span class="keysonly"> or </span><b class="keysonly">L</b><span class="keysonly"> shows</span><span class="touchonly">The Leaderboard button shows</span> the leaderboard.</div>
+        <label class="check" id="seededRow"><input type="checkbox" id="seeded"> Seeded session</label>
+        <div class="hint" id="seededHint">Rank the players before you start. The best play together on the top court, and so on down; after every round they're re-ranked by win rate, then points margin per game. Needs <b>Keep score</b>.</div>
         <label class="check"><input type="checkbox" id="touchBtns"> On-screen buttons during the session</label>
         <div class="hint" id="touchHint"></div>
       </div>
@@ -357,6 +373,7 @@
           <button id="courtPlus" title="More courts">+</button>
         </div>
         <div id="courtLabels" style="margin-top:6px"></div>
+        <div class="hint hidden" id="courtRankHint">Seeded session: the first court is the <b>top court</b> (best-ranked game), then the next, and so on. Rename or reorder the labels to match your courts.</div>
       </div>
     </div>
 
@@ -383,6 +400,11 @@
         <div class="chips" id="pairChips"></div>
         <div class="subh" id="unpairedTitle">Not yet paired</div>
         <div class="chips" id="unpairedChips"></div>
+      </div>
+      <div id="seedArea" class="hidden">
+        <div class="subh">Seeding (1 = strongest)</div>
+        <div class="hint" style="margin:0 0 8px">Drag to reorder, or use the arrows. This sets round 1; after that, results take over.</div>
+        <ol class="seedlist" id="seedList"></ol>
       </div>
       <div class="summary" id="summary"></div>
       <div class="errors" id="errors"></div>
@@ -532,7 +554,7 @@
   <div style="display:flex;align-items:baseline;gap:2vw">
     <h1>Leader<em>board</em></h1>
     <div class="sub" id="boardSub"></div>
-    <div class="sub" style="margin-left:auto">Ranked by wins, then points margin<span class="keysonly"> · <b>F1</b>, <b>L</b> or <b>Esc</b> to close</span></div>
+    <div class="sub" style="margin-left:auto"><span id="boardRule">Ranked by wins, then points margin</span><span class="keysonly"> · <b>F1</b>, <b>L</b> or <b>Esc</b> to close</span></div>
   </div>
   <div id="boardCols"></div>
   <div class="touchonly" style="text-align:center"><button class="tb next" id="tbBoardClose" style="min-width:40vw">Close</button></div>
@@ -574,7 +596,8 @@
     opponent: 20,        // per (count^2) of previous opposing
     opponentRecent: 12,  // opposed in the previous round
     court: 2,            // per previous visit to this court
-    courtRecent: 3       // same court as previous round
+    courtRecent: 3,      // same court as previous round
+    seed: 200            // seeded sessions: per player moved one court away from their ranking band
   };
 
   function unitsPerCourt(mode) { return mode === "doubles" ? 4 : 2; }
@@ -727,6 +750,58 @@
     return best;
   }
 
+  // ---- Seeded sessions -------------------------------------------------------
+  // Players (already ranked best-first) are grouped onto courts in rank order:
+  // the top group on the first court, the next group on the second, and so on.
+  // Within a doubles court the freshest of the three possible pairings is used.
+  // A player may be swapped with one in the neighbouring band only when that
+  // avoids enough repetition to outweigh W.seed per player moved.
+  function groupCost(s, ids, r) {
+    if (s.mode !== "doubles") {
+      return { cost: pairCost(s.opponent, s.opponentLast, ids[0], ids[1], W.opponent, W.opponentRecent, r), order: ids.slice() };
+    }
+    var a = ids[0], b = ids[1], c = ids[2], d = ids[3];
+    var options = [[a, b, c, d], [a, c, b, d], [a, d, b, c]];
+    var best = null;
+    options.forEach(function (o) {
+      var cost = matchCost(s, o, 0, 4, r) - courtCost(s, o, 0) + s.rng() * 1e-6;   // court not chosen here
+      if (!best || cost < best.cost) best = { cost: cost, order: o };
+    });
+    return best;
+  }
+  function seededArrange(s, ranked, courtsUsed, per, r) {
+    var ideal = {};
+    ranked.forEach(function (id, i) { ideal[id] = Math.floor(i / per); });
+    var groups = [];
+    for (var g = 0; g < courtsUsed; g++) groups.push(ranked.slice(g * per, (g + 1) * per));
+    var gc = groups.map(function (ids) { return groupCost(s, ids, r); });
+    var seedPen = function (id, g) { var dlt = Math.abs(g - ideal[id]); return dlt > 1 ? Infinity : W.seed * dlt; };
+    var improved = true, guard = 0;
+    while (improved && guard++ < 50) {
+      improved = false;
+      for (g = 0; g + 1 < courtsUsed; g++) {
+        for (var i = 0; i < per; i++) {
+          for (var j = 0; j < per; j++) {
+            var x = groups[g][i], y = groups[g + 1][j];
+            var before = gc[g].cost + gc[g + 1].cost + seedPen(x, g) + seedPen(y, g + 1);
+            var after = seedPen(x, g + 1) + seedPen(y, g);
+            if (after === Infinity) continue;
+            var ga = groups[g].slice(), gb = groups[g + 1].slice();
+            ga[i] = y; gb[j] = x;
+            var ca = groupCost(s, ga, r), cb = groupCost(s, gb, r);
+            after += ca.cost + cb.cost;
+            if (after < before - 1e-6) {
+              groups[g] = ga; groups[g + 1] = gb; gc[g] = ca; gc[g + 1] = cb; improved = true;
+            }
+          }
+        }
+      }
+    }
+    var slots = [];
+    gc.forEach(function (x) { slots = slots.concat(x.order); });
+    return slots;
+  }
+
   function record(s, round) {
     var r = round.index;
     var present = round.matches.length * unitsPerCourt(s.mode) + round.sitting.length;
@@ -759,7 +834,8 @@
   }
 
   // Generate, record and return the next round. Returns null if not enough players.
-  function nextRound(s) {
+  // opts.ranking (seeded sessions): active unit ids, best first.
+  function nextRound(s, opts) {
     var r = s.rounds.length;
     var ids = activeIds(s);
     var cap = capacity(s, ids.length);
@@ -768,7 +844,15 @@
     var sitSet = {};
     sitters.forEach(function (id) { sitSet[id] = true; });
     var players = ids.filter(function (id) { return !sitSet[id]; });
-    var slots = arrange(s, players, cap.courtsUsed, cap.per, r);
+    var slots;
+    if (s.seeded && opts && opts.ranking) {
+      var inRank = {}, ranked = [];
+      opts.ranking.forEach(function (id) { if (!sitSet[id] && s.units[id] && s.units[id].active && !inRank[id]) { inRank[id] = true; ranked.push(id); } });
+      players.forEach(function (id) { if (!inRank[id]) ranked.push(id); });
+      slots = seededArrange(s, ranked, cap.courtsUsed, cap.per, r);
+    } else {
+      slots = arrange(s, players, cap.courtsUsed, cap.per, r);
+    }
     var matches = [];
     var half = cap.per / 2;
     for (var m = 0; m < cap.courtsUsed; m++) {
@@ -857,7 +941,7 @@
   });
 
   // ---------- state ----------
-  var settings = { mode: "doubles", keepScore: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
+  var settings = { mode: "doubles", keepScore: false, seeded: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
   var session = null;   // engine session
   var view = 0;         // index of round being shown
 
@@ -931,13 +1015,18 @@
       sel.pairs.forEach(function (pr) {
         paired[pr[0]] = paired[pr[1]] = true;
         var a = nameOf(pr[0]), b = nameOf(pr[1]);
-        units.push({ name: a + " & " + b, members: [a, b] });
+        units.push({ name: a + " & " + b, members: [a, b], key: pr[0] + "+" + pr[1] });
       });
       var loose = keys.filter(function (k) { return !paired[k]; });
       if (loose.length) errors.push(loose.length === 1 ? "1 ticked player isn't in a pair yet." :
         loose.length + " ticked players aren't in a pair yet.");
     } else {
-      units = keys.map(function (k) { return { name: nameOf(k) }; });
+      units = keys.map(function (k) { return { name: nameOf(k), key: k }; });
+    }
+    if (seededOn()) {                       // start the session in seeding order
+      syncSeed();
+      var pos = {}; sel.seed.forEach(function (k, i) { pos[k] = i; });
+      units.sort(function (x, y) { return (pos[x.key] === undefined ? 1e9 : pos[x.key]) - (pos[y.key] === undefined ? 1e9 : pos[y.key]); });
     }
     var cap = describeCapacity(units.length, settings.courtCount, settings.mode);
     $("summary").innerHTML = cap.html;
@@ -1028,7 +1117,8 @@
           mode: ["doubles", "singles", "teams"].indexOf(x.mode) >= 0 ? x.mode : "doubles",
           courtCount: Math.max(1, Math.min(30, parseInt(x.courtCount, 10) || 1)),
           courtLabels: Array.isArray(x.courtLabels) ? x.courtLabels.map(String) : [],
-          keepScore: !!x.keepScore,
+          keepScore: !!x.keepScore, seeded: !!x.seeded,
+          seed: (Array.isArray(x.seed) ? x.seed : []).map(String),
           playerIds: (x.playerIds || []).map(String).filter(function (m) { return ids[m]; }),
           guests: (x.guests || []).map(String),
           pairs: (x.pairs || []).filter(function (pr) { return Array.isArray(pr) && pr.length === 2; }).map(function (pr) { return pr.map(String); }) };
@@ -1297,18 +1387,18 @@
   // =====================================================================
   // Setup: choosing who's playing today
   // =====================================================================
-  var sel = { ids: {}, guests: [], pairs: [], group: "all", pick: null };
+  var sel = { ids: {}, guests: [], pairs: [], seed: [], group: "all", pick: null };
   // keys: a player id, or "g:" + name for a guest who isn't in the database
 
   function loadSel() {
     try {
       var s = JSON.parse(localStorage.getItem(SEL_KEY) || "null");
-      if (s) { sel.ids = s.ids || {}; sel.guests = s.guests || []; sel.pairs = s.pairs || []; sel.group = s.group || "all"; }
+      if (s) { sel.ids = s.ids || {}; sel.guests = s.guests || []; sel.pairs = s.pairs || []; sel.seed = s.seed || []; sel.group = s.group || "all"; }
     } catch (e) {}
   }
   function saveSel() {
     if (editCtx) return;
-    try { localStorage.setItem(SEL_KEY, JSON.stringify({ ids: sel.ids, guests: sel.guests, pairs: sel.pairs, group: sel.group })); } catch (e) {}
+    try { localStorage.setItem(SEL_KEY, JSON.stringify({ ids: sel.ids, guests: sel.guests, pairs: sel.pairs, seed: sel.seed, group: sel.group })); } catch (e) {}
   }
   function nameOf(k) {
     if (k.indexOf("g:") === 0) return k.slice(2);
@@ -1326,6 +1416,76 @@
     sel.pairs = sel.pairs.filter(function (pr) { return live[pr[0]] && live[pr[1]]; });
     if (sel.pick && !live[sel.pick]) sel.pick = null;
     if (sel.group !== "all" && !groupById(sel.group)) sel.group = "all";
+    syncSeed();
+  }
+
+  // ---------- seeding ----------
+  function seededOn() { return !!(settings.keepScore && settings.seeded); }
+  // The things being ranked: players, or pairs in Teams mode (key "a+b").
+  function unitKeys() {
+    if (settings.mode === "teams") return sel.pairs.map(function (pr) { return pr[0] + "+" + pr[1]; });
+    return selectedKeys();
+  }
+  function unitLabel(k) {
+    if (k.indexOf("+") > 0) { var pr = k.split("+"); return nameOf(pr[0]) + " & " + nameOf(pr[1]); }
+    return nameOf(k);
+  }
+  // Keep the existing order; drop anyone no longer playing; add newcomers at the bottom.
+  function syncSeed() {
+    var keys = unitKeys(), live = {}, seen = {};
+    keys.forEach(function (k) { live[k] = true; });
+    sel.seed = (sel.seed || []).filter(function (k) { if (!live[k] || seen[k]) return false; seen[k] = true; return true; });
+    keys.forEach(function (k) { if (!seen[k]) { sel.seed.push(k); seen[k] = true; } });
+  }
+  function moveSeed(from, to) {
+    if (to < 0 || to >= sel.seed.length || from === to) return;
+    var k = sel.seed.splice(from, 1)[0];
+    sel.seed.splice(to, 0, k);
+    saveSel(); renderSeed();
+  }
+  var dragFrom = -1;
+  function renderSeed() {
+    var on = seededOn();
+    $("seedArea").classList.toggle("hidden", !on);
+    $("courtRankHint").classList.toggle("hidden", !on);
+    $("seededRow").classList.toggle("off", !settings.keepScore);
+    $("seeded").disabled = !settings.keepScore;
+    if (!on) return;
+    syncSeed();
+    var ol = $("seedList"); ol.innerHTML = "";
+    if (!sel.seed.length) {
+      var e = document.createElement("li"); e.className = "none"; e.style.cursor = "default";
+      e.textContent = settings.mode === "teams" ? "Make some pairs above first." : "Tick players above.";
+      ol.appendChild(e); return;
+    }
+    sel.seed.forEach(function (k, i) {
+      var li = document.createElement("li"); li.draggable = true; li.dataset.i = i;
+      li.innerHTML = "<span class='sr'>" + (i + 1) + "</span><span class='grip'>⋮⋮</span><span class='sn'></span>";
+      li.querySelector(".sn").textContent = unitLabel(k);
+      var up = document.createElement("button"); up.textContent = "↑"; up.title = "Move up"; up.disabled = i === 0;
+      var dn = document.createElement("button"); dn.textContent = "↓"; dn.title = "Move down"; dn.disabled = i === sel.seed.length - 1;
+      up.addEventListener("click", function () { moveSeed(i, i - 1); });
+      dn.addEventListener("click", function () { moveSeed(i, i + 1); });
+      li.appendChild(up); li.appendChild(dn);
+      li.addEventListener("dragstart", function (ev) { dragFrom = i; li.classList.add("dragging"); try { ev.dataTransfer.setData("text/plain", String(i)); ev.dataTransfer.effectAllowed = "move"; } catch (x) {} });
+      li.addEventListener("dragend", function () { dragFrom = -1; li.classList.remove("dragging"); });
+      li.addEventListener("dragover", function (ev) {
+        ev.preventDefault();
+        var r = li.getBoundingClientRect(), top = ev.clientY < r.top + r.height / 2;
+        li.classList.toggle("over-top", top); li.classList.toggle("over-bottom", !top);
+      });
+      li.addEventListener("dragleave", function () { li.classList.remove("over-top", "over-bottom"); });
+      li.addEventListener("drop", function (ev) {
+        ev.preventDefault();
+        var r = li.getBoundingClientRect(), top = ev.clientY < r.top + r.height / 2;
+        li.classList.remove("over-top", "over-bottom");
+        if (dragFrom < 0) return;
+        var to = i + (top ? 0 : 1);
+        if (dragFrom < to) to--;
+        moveSeed(dragFrom, to);
+      });
+      ol.appendChild(li);
+    });
   }
   function untick(k) {
     if (k.indexOf("g:") === 0) sel.guests = sel.guests.filter(function (g) { return "g:" + g !== k; });
@@ -1415,6 +1575,7 @@
         }));
       });
     }
+    renderSeed();
     validate();
   }
 
@@ -1936,12 +2097,14 @@
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function loadPlanIntoForm(ss) {
     settings.mode = ss.mode; settings.courtCount = ss.courtCount; settings.courtLabels = ss.courtLabels.slice(); settings.keepScore = ss.keepScore;
+    settings.seeded = !!ss.seeded; sel.seed = (ss.seed || []).slice();
     sel.ids = {}; ss.playerIds.forEach(function (id) { sel.ids[id] = true; });
     sel.guests = ss.guests.slice(); sel.pairs = clone(ss.pairs); sel.group = "all"; sel.pick = null;
   }
   function refreshForm() {
     $("courtCount").value = settings.courtCount;
     $("keepScore").checked = !!settings.keepScore;
+    $("seeded").checked = !!settings.seeded;
     renderCourtLabels();
     setMode(settings.mode);
   }
@@ -1950,7 +2113,7 @@
     if (ss && !canEdit()) return;
     editCtx = { id: ss ? ss.id : null, stash: { settings: clone(settings), sel: clone(sel) } };
     if (ss) loadPlanIntoForm(ss);
-    else { sel.ids = {}; sel.guests = []; sel.pairs = []; sel.group = "all"; sel.pick = null; }
+    else { sel.ids = {}; sel.guests = []; sel.pairs = []; sel.seed = []; sel.group = "all"; sel.pick = null; }
     $("ebTitle").textContent = ss ? "Editing: " + ss.name : "New scheduled session";
     $("ebName").value = ss ? ss.name : "";
     $("ebWhen").value = ss ? ss.when : "";
@@ -1964,7 +2127,7 @@
   function endEdit() {
     var st = editCtx.stash;
     editCtx = null;
-    settings = st.settings; sel.ids = st.sel.ids; sel.guests = st.sel.guests; sel.pairs = st.sel.pairs; sel.group = st.sel.group; sel.pick = null;
+    settings = st.settings; sel.ids = st.sel.ids; sel.guests = st.sel.guests; sel.pairs = st.sel.pairs; sel.seed = st.sel.seed || []; sel.group = st.sel.group; sel.pick = null;
     document.body.classList.remove("editing");
     $("editBar").classList.add("hidden");
     refreshForm(); renderSchedule();
@@ -1983,6 +2146,7 @@
     rec.courtLabels = settings.courtLabels.slice(0, settings.courtCount); rec.keepScore = !!settings.keepScore;
     rec.playerIds = db.players.filter(function (p) { return sel.ids[p.id]; }).map(function (p) { return p.id; });
     rec.guests = sel.guests.slice(); rec.pairs = clone(sel.pairs);
+    rec.seeded = !!settings.seeded; syncSeed(); rec.seed = sel.seed.slice();
     saveDb();
     endEdit();
     toast("“" + name + "” saved for " + fmtWhen(when) + ".", true);
@@ -2075,10 +2239,11 @@
     for (var i = 0; i < settings.courtCount; i++) courts.push(courtLabel(i));
     session = E.createSession({ mode: settings.mode, courts: courts, units: units });
     session.scoring = !!settings.keepScore;
+    session.seeded = seededOn();
     session.schedId = launching ? launching.id : null;
     session.schedName = launching ? launching.name : null;
     computeDisplayNames(session);
-    E.nextRound(session);
+    E.nextRound(session, rankingOpts());
     view = 0;
     enterRun();
   }
@@ -2238,7 +2403,20 @@
     }
   }
 
-  // Wins first, then points margin. Equal on both = shared rank.
+  // Seeded sessions: win rate, then points margin per game; the starting seed
+  // (entry order) breaks ties, and anyone who hasn't played yet counts as 50%.
+  function rateOf(r) { return r.p ? r.w / r.p : 0.5; }
+  function mpgOf(r) { return r.p ? r.m / r.p : 0; }
+  function seedCompare(a, b) {
+    return rateOf(b) - rateOf(a) || mpgOf(b) - mpgOf(a) || session.order.indexOf(a.id) - session.order.indexOf(b.id);
+  }
+  function rankingOpts() {
+    if (!session || !session.seeded) return undefined;
+    var rows = standings().filter(function (r) { return r.active; });
+    return { ranking: rows.map(function (r) { return r.id; }) };
+  }
+
+  // Wins first, then points margin (seeded: win rate, then margin per game). Equal = shared rank.
   function standings() {
     var t = {};
     session.order.forEach(function (id) {
@@ -2257,6 +2435,14 @@
     });
     var rows = Object.keys(t).map(function (k) { var r = t[k]; r.m = r.pf - r.pa; return r; })
       .filter(function (r) { return r.active || r.p > 0; });
+    if (session.seeded) {
+      rows.sort(seedCompare);
+      rows.forEach(function (r, i) {
+        var prev = rows[i - 1];
+        r.rank = prev && prev.p && r.p && rateOf(prev) === rateOf(r) && mpgOf(prev) === mpgOf(r) ? prev.rank : i + 1;
+      });
+      return rows;
+    }
     rows.sort(function (a, b) { return b.w - a.w || b.m - a.m || a.name.localeCompare(b.name); });
     rows.forEach(function (r, i) {
       var prev = rows[i - 1];
@@ -2267,6 +2453,7 @@
 
   function openBoard() {
     var rows = standings();
+    $("boardRule").textContent = session.seeded ? "Ranked by win rate, then points margin per game" : "Ranked by wins, then points margin";
     var done = 0;
     session.rounds.forEach(function (rd) { if (!roundProblem(rd)) done++; });
     $("boardSub").textContent = done + " of " + session.rounds.length + " round" +
@@ -2275,12 +2462,14 @@
     var cols = $("boardCols"); cols.innerHTML = "";
     for (var c = 0; c * perCol < rows.length; c++) {
       var html = "<table><tr><th></th><th class='l'>" + (session.mode === "teams" ? "Team" : "Player") +
-        "</th><th>Played</th><th>Won</th><th>Lost</th><th>For</th><th>Agst</th><th>Margin</th></tr>";
+        "</th><th>Played</th><th>Won</th><th>Lost</th>" + (session.seeded ? "<th>Win %</th>" : "") +
+        "<th>For</th><th>Agst</th><th>Margin</th></tr>";
       rows.slice(c * perCol, (c + 1) * perCol).forEach(function (r) {
         var shared = rows.filter(function (x) { return x.rank === r.rank; }).length > 1;
         html += "<tr" + (r.active ? "" : " class='gone'") + "><td class='rank'>" + (shared ? "=" : "") + r.rank +
           "</td><td class='l'>" + esc(r.name) + (r.active ? "" : " (left)") + "</td><td>" + r.p + "</td><td class='w'>" + r.w +
-          "</td><td>" + r.l + "</td><td>" + r.pf + "</td><td>" + r.pa + "</td><td class='" +
+          "</td><td>" + r.l + "</td>" + (session.seeded ? "<td>" + (r.p ? Math.round(100 * r.w / r.p) + "%" : "–") + "</td>" : "") +
+          "<td>" + r.pf + "</td><td>" + r.pa + "</td><td class='" +
           (r.m > 0 ? "pos" : r.m < 0 ? "neg" : "") + "'>" + (r.m > 0 ? "+" : "") + r.m + "</td></tr>";
       });
       cols.innerHTML += html + "</table>";
@@ -2352,7 +2541,7 @@
       if (prob) { toast(prob); focusFirstEmpty(); return; }
     }
     if (view < session.rounds.length - 1) { view++; render(); return; }
-    var r = E.nextRound(session);
+    var r = E.nextRound(session, rankingOpts());
     if (!r) { toast("Not enough players for a court — press E to add players."); return; }
     view = session.rounds.length - 1; render();
   }
@@ -2547,7 +2736,8 @@
   $("ebName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); saveEdit(); } });
   $("ebCancel").addEventListener("click", endEdit);
   $("finishBtn").addEventListener("click", finishSession);
-  $("keepScore").addEventListener("change", function (e) { settings.keepScore = e.target.checked; persist(); });
+  $("keepScore").addEventListener("change", function (e) { settings.keepScore = e.target.checked; persist(); renderPicker(); });
+  $("seeded").addEventListener("change", function (e) { settings.seeded = e.target.checked; persist(); renderPicker(); });
   $("touchBtns").addEventListener("change", function (e) {
     try { localStorage.setItem(TOUCH_KEY, e.target.checked ? "1" : "0"); } catch (x) {}
     applyTouch(e.target.checked);
@@ -2596,6 +2786,7 @@
     } catch (e) {}
     $("courtCount").value = settings.courtCount;
     $("keepScore").checked = !!settings.keepScore;
+    $("seeded").checked = !!settings.seeded;
     loadSel();
     return initDb();
   }).then(function () {
