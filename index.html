@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fair Dinkum</title>
+<script id="fdKioskData" type="application/json"></script>
 <meta name="description" content="Pickleball session organiser: fair court, partner and sit-out rotation, scoring and scheduling.">
 <meta name="theme-color" content="#d7f23a">
 <link rel="manifest" href="manifest.webmanifest">
@@ -520,6 +521,13 @@
       </ol>
       <div class="kioskwarn">The link never changes. When your player list changes, just repeat steps 1 and 2 (the new file replaces the old one); the kiosk picks it up next time it starts. Keep the link private: anyone with it can read the list.</div>
       <div style="margin-top:8px"><button class="linkbtn" id="kioskReset">Start again with a new link…</button></div>
+      <div class="subh" style="margin-top:18px">Or: a laptop copy (no website or internet needed)</div>
+      <ol class="kioskhow">
+        <li><b>Download the laptop copy</b>: <button class="btn secondary sm" id="kioskLaptop">Download laptop copy</button> It's the whole app as one file (<b>FairDinkum-kiosk.html</b>) with your current player list built in.</li>
+        <li><b>Put it on the kiosk laptop</b> in <b>C:\Users\Public\Documents</b> (a folder every account on the laptop, including the kiosk account, can read).</li>
+        <li><b>Set up the kiosk</b> as above, but use this as the web address: <div class="kiosklink" style="margin-top:6px"><input type="text" id="kioskFileUrl" readonly value="file:///C:/Users/Public/Documents/FairDinkum-kiosk.html"><button class="btn secondary sm" id="kioskFileCopy">Copy</button></div></li>
+      </ol>
+      <div class="kioskwarn">The copy doesn't update itself. When your player list changes, or Fair Dinkum gets new features, download a new laptop copy and replace the file. The player list in this file isn't scrambled, so keep it on the kiosk laptop.</div>
     </div>
     <footer>
       <button class="btn secondary" id="kioskClose">Close</button>
@@ -938,9 +946,13 @@
   // Short kiosk links look like "#k=<file id>.<key>": the player list is in an encrypted file
   // (kiosk/<file id>.json on the website) and only this link holds the key to read it.
   var KIOSK_SHORT = /^#k=([a-z0-9]{8,32})\.([A-Za-z0-9_-]{16,64})$/.exec(location.hash);
-  var KIOSK = !!KIOSK_SHORT || /^#kiosk(=|$)/.test(location.hash);
-  var KIOSK_DATA = KIOSK && !KIOSK_SHORT ? location.hash.replace(/^#kiosk=?/, "") : "";
-  var KP = KIOSK ? "fairDinkum.kiosk." : "";
+  // Laptop copy: a saved copy of the app with the player list built in (made under Kiosk link…).
+  var KIOSK_EMBED = null;
+  try { var ke = document.getElementById("fdKioskData"); if (ke && ke.textContent.trim()) KIOSK_EMBED = JSON.parse(ke.textContent); } catch (e) {}
+  var KIOSK = !!KIOSK_SHORT || !!KIOSK_EMBED || /^#kiosk(=|$)/.test(location.hash);
+  var KIOSK_DATA = KIOSK && !KIOSK_SHORT && !KIOSK_EMBED ? location.hash.replace(/^#kiosk=?/, "") : "";
+  // Each laptop copy gets its own storage keys, so a newer copy is never hidden by an older one's data.
+  var KP = KIOSK ? "fairDinkum.kiosk." + (KIOSK_EMBED ? "c" + KIOSK_EMBED.made + "." : "") : "";
   if (KIOSK) document.documentElement.classList.add("kiosk");
   var $ = function (id) { return document.getElementById(id); };
 
@@ -1349,7 +1361,10 @@
       // The list comes from the link; edits last until the kiosk's browser restarts.
       store.fsApi = false; store.state = "kiosk";
       try { var km = localStorage.getItem(MIRROR_KEY); if (km) { db = normaliseDb(JSON.parse(km)); return; } } catch (e) {}
-      if (KIOSK_SHORT) {
+      if (KIOSK_EMBED) {
+        try { db = normaliseDb(KIOSK_EMBED.db); mirror(); }
+        catch (e) { store.kioskError = "This laptop copy's player list couldn't be read. Download a fresh laptop copy from Players & groups › Kiosk link."; toast(store.kioskError); }
+      } else if (KIOSK_SHORT) {
         try { db = await loadKioskFile(); mirror(); }
         catch (e) { store.kioskError = e.message; toast(e.message); }
       } else if (KIOSK_DATA) {
@@ -1402,7 +1417,7 @@
     if (st === "kiosk" && store.kioskError) {
       cls = "bad"; html = "<span class='grow'>" + esc(store.kioskError) + "</span>";
     } else if (st === "kiosk") {
-      html = "<span class='grow'>Kiosk mode · player list from the kiosk link · changes last until the app restarts.</span>";
+      html = "<span class='grow'>Kiosk mode · player list " + (KIOSK_EMBED ? "built into this laptop copy (made " + esc(new Date(KIOSK_EMBED.made).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })) + ")" : "from the kiosk link") + " · changes last until the app restarts.</span>";
     } else if (st === "ok") {
       html = "<span class='grow'>Player database: folder <b>“" + esc(store.dir.name) + "”</b> · players.json" +
         (store.lastSaved ? " · saved " + store.lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "") + "</span>";
@@ -2265,6 +2280,28 @@
       toast("Kiosk file " + db.kiosk.id + ".json downloaded. Now upload it to GitHub (step 2).", true);
     } catch (e) { toast("Couldn't make the kiosk file: " + (e && e.message || e)); }
   }
+  // The laptop copy is this app's own page with the player list put into the empty
+  // fdKioskData tag. The page is fetched from the website so the copy is always current.
+  async function downloadLaptopCopy() {
+    var html = null, urls = [kioskBase(), KIOSK_BASE];
+    for (var i = 0; i < urls.length && !html; i++) {
+      try { var r = await fetch(urls[i] + "?t=" + Date.now(), { cache: "no-store" }); if (r.ok) html = await r.text(); } catch (e) {}
+    }
+    var tag = '<script id="fdKioskData" type="application/json">', end = "</" + "script>";
+    if (!html || html.indexOf(tag + end) < 0) {
+      toast("Couldn't fetch the app from the Fair Dinkum website. Check the internet connection and try again.");
+      return;
+    }
+    var data = JSON.stringify({ v: 1, made: Date.now(), db: { players: db.players, groups: db.groups, sessions: db.sessions } })
+      .replace(/</g, "\\u003c");
+    html = html.replace(tag + end, function () { return tag + data + end; });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    a.download = "FairDinkum-kiosk.html";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    toast("Laptop copy downloaded as FairDinkum-kiosk.html. Copy it to C:\\Users\\Public\\Documents on the kiosk laptop.", true);
+  }
   function resetKiosk() {
     if (!confirm("Make a brand-new kiosk link?\n\nThe current link will stop working: you'll need to put the new link into the kiosk settings and upload a new kiosk file.")) return;
     db.kiosk = newKiosk(); saveDb(); openKioskDialog();
@@ -2793,6 +2830,13 @@
   $("kioskCopy").addEventListener("click", copyKiosk);
   $("kioskDownload").addEventListener("click", downloadKioskFile);
   $("kioskReset").addEventListener("click", resetKiosk);
+  $("kioskLaptop").addEventListener("click", downloadLaptopCopy);
+  $("kioskFileCopy").addEventListener("click", function () {
+    var t = $("kioskFileUrl"); t.focus(); t.select();
+    var done = function () { toast("Web address copied.", true); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(done, function () { document.execCommand("copy"); done(); });
+    else { document.execCommand("copy"); done(); }
+  });
   $("kioskClose").addEventListener("click", function () { $("kioskDialog").classList.add("hidden"); });
   $("kioskDialog").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); $("kioskDialog").classList.add("hidden"); } });
   $("delAllPlayers").addEventListener("click", deleteAllPlayers);
