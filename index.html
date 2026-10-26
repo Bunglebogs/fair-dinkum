@@ -346,6 +346,13 @@
   .boardbtns { display: flex; gap: 10px; justify-content: center; }
   .boardbtns .btn { font-size: 2vh; padding: .8vh 2vw; }
 
+  /* ---------- Online sign-ups ---------- */
+  .sulist { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 2px 14px; margin: 6px 0 10px; font-size: 14px; }
+  .sulist .in { color: var(--ok); font-weight: 600; } .sulist .out { color: var(--danger); } .sulist .none { color: var(--muted); }
+  .subtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+  .sustat { background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+  .srow .sd .live { color: var(--ok); font-weight: 600; }
+
   /* ---------- Player results, summary, help ---------- */
   .pd table, .sumtable { border-collapse: collapse; width: 100%; font-size: 15px; }
   .pd th, .pd td, .sumtable th, .sumtable td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
@@ -504,6 +511,7 @@
       <button class="btn secondary sm nokiosk" id="importNames">Import names from Excel…</button>
       <button class="btn secondary sm nokiosk" id="kioskLinkBtn">Kiosk link…</button>
       <button class="btn secondary sm" id="clearResults">Clear past results…</button>
+      <button class="btn secondary sm nokiosk" id="onlineBtn">Online sign-ups…</button>
       <input type="file" id="namesFile" accept=".xlsx,.csv,.txt" class="hidden">
       <input type="file" id="importFile" accept=".json,application/json" class="hidden">
     </div>
@@ -668,6 +676,26 @@
       <button class="btn secondary" id="sumSave">Save as file</button>
       <button class="btn primary" id="sumPrint">Print</button>
     </footer>
+  </div>
+</div>
+
+<!-- ================= ONLINE SIGN-UPS: CONNECT ================= -->
+<div id="onlineDialog" class="overlay hidden">
+  <div class="dialog" style="width:min(620px,94vw)">
+    <header>Online sign-ups</header>
+    <div class="sub">Players get a link for each scheduled session to say whether they're coming, with optional email invites and reminders.</div>
+    <div id="onlineBody" style="padding:12px 22px 0;font-size:15px;line-height:1.5"></div>
+    <footer><div class="errors" id="onlineErr"></div><button class="btn secondary" id="onlineClose">Close</button></footer>
+  </div>
+</div>
+
+<!-- ================= ONLINE SIGN-UPS: ONE SESSION ================= -->
+<div id="suDialog" class="overlay hidden">
+  <div class="dialog" style="width:min(720px,94vw)">
+    <header id="suTitle">Sign-ups</header>
+    <div class="sub" id="suSub"></div>
+    <div id="suBody" style="padding:12px 22px 0;font-size:15px;line-height:1.5;overflow:auto"></div>
+    <footer><div class="errors" id="suErr"></div><button class="btn secondary" id="suClose">Close</button></footer>
   </div>
 </div>
 
@@ -2075,7 +2103,8 @@
     if (!d || !Array.isArray(d.players) || !Array.isArray(d.groups)) throw new Error("That isn't a Fair Dinkum player database.");
     var ids = {};
     var players = d.players.filter(function (p) { return p && p.id && typeof p.name === "string" && p.name.trim(); })
-      .map(function (p) { ids[p.id] = true; var o = { id: String(p.id), name: p.name.trim() }; if (p.sex === "m" || p.sex === "f") o.sex = p.sex; return o; });
+      .map(function (p) { ids[p.id] = true; var o = { id: String(p.id), name: p.name.trim() }; if (p.sex === "m" || p.sex === "f") o.sex = p.sex;
+        if (p.dupr && /^[A-Za-z0-9-]{3,20}$/.test(String(p.dupr))) o.dupr = String(p.dupr); return o; });
     var groups = d.groups.filter(function (g) { return g && g.id && typeof g.name === "string"; })
       .map(function (g) {
         return { id: String(g.id), name: g.name.trim() || "Group",
@@ -2090,6 +2119,7 @@
           keepScore: !!x.keepScore,
           style: typeof x.style === "string" && E.STYLES[x.style] ? x.style : (x.ladder ? "ladder" : x.seeded ? "seeded" : "rotation"),
           opt: normOpt(x.opt), balance: !!x.balance, timer: Math.max(0, Math.min(90, parseInt(x.timer, 10) || 0)),
+          online: x.online && typeof x.online === "object" ? { remind: Math.max(0, Math.min(168, parseInt(x.online.remind, 10) || 0)), link: String(x.online.link || "") } : null,
           gsex: (function (g) { var o = {}; if (g && typeof g === "object") Object.keys(g).forEach(function (k) { if (g[k] === "m" || g[k] === "f") o[k] = g[k]; }); return o; })(x.gsex),
           seed: (Array.isArray(x.seed) ? x.seed : []).map(String),
           playerIds: (x.playerIds || []).map(String).filter(function (m) { return ids[m]; }),
@@ -2107,6 +2137,7 @@
       });
     var out = { version: 1, players: players, groups: groups, sessions: sessions, results: results };
     if (d.kiosk && /^[a-z0-9]{8,32}$/.test(d.kiosk.id) && /^[A-Za-z0-9_-]{16,64}$/.test(d.kiosk.key)) out.kiosk = { id: d.kiosk.id, key: d.kiosk.key };
+    if (d.online && /^[A-Za-z0-9_-]{8,64}$/.test(d.online.org || "") && /^[A-Za-z0-9_-]{16,128}$/.test(d.online.key || "")) out.online = { org: d.online.org, key: d.online.key };
     return out;
   }
   function dbText() { return JSON.stringify(db, null, 2); }
@@ -2748,6 +2779,16 @@
       tags.appendChild(add);
       n.appendChild(tags);
       row.appendChild(n);
+      if (p.dupr) { var du = document.createElement("span"); du.className = "rec"; du.textContent = "DUPR " + p.dupr; nm.appendChild(du); }
+      row.appendChild(iconBtn("DUPR ID", "", function () {
+        if (!canEdit()) return;
+        var v = prompt("DUPR ID for " + p.name + " (leave empty to remove):", p.dupr || "");
+        if (v === null) return;
+        v = v.trim();
+        if (v && !/^[A-Za-z0-9-]{3,20}$/.test(v)) { toast("That doesn't look like a DUPR ID (letters, numbers and dashes only)."); return; }
+        if (v) p.dupr = v; else delete p.dupr;
+        saveDb(); renderManage();
+      }));
       row.appendChild(iconBtn("Rename", "", function () {
         if (!canEdit()) return;
         renameInline(row, p.name, function (v) {
@@ -3141,15 +3182,24 @@
       dd.textContent = MODE_NAME[ss.mode] + " · " + cnt + " player" + (cnt === 1 ? "" : "s") +
         (ss.mode === "teams" ? " (" + ss.pairs.length + " pair" + (ss.pairs.length === 1 ? "" : "s") + ")" : "") +
         " · " + ss.courtCount + " court" + (ss.courtCount === 1 ? "" : "s") + (ss.style && ss.style !== "rotation" && styleFits(ss.style, ss.mode) ? " · " + styleLabel(ss.style) : "") + (ss.keepScore ? " · keeping score" : "");
+      if (ss.online && onlineOn()) {
+        var lv = document.createElement("span"); lv.className = "live";
+        var cs = suCache[ss.id];
+        lv.textContent = " · sign-up page live" + (cs && cs.data ? ": " + countIn(cs.data) + " coming, " + countOut(cs.data) + " can't make it" : "");
+        dd.appendChild(lv);
+        refreshSu(ss, false);
+      }
       info.appendChild(dd);
       row.appendChild(info);
       if (live) {
         row.appendChild(mkBtn("Resume", "primary", function () { view = session.rounds.length - 1; enterRun(); }));
       } else {
         row.appendChild(mkBtn("Edit", "secondary", function () { startEdit(ss); }));
+        if (onlineOn()) row.appendChild(mkBtn("Sign-ups", "secondary", function () { openSignups(ss); }));
         row.appendChild(mkBtn("Delete", "secondary", function () {
           if (!canEdit()) return;
-          if (!confirm("Delete the scheduled session “" + ss.name + "”?")) return;
+          if (!confirm("Delete the scheduled session “" + ss.name + "”?" + (ss.online ? " Its sign-up page will be taken down too." : ""))) return;
+          if (ss.online) takeDown(ss, true);
           db.sessions = db.sessions.filter(function (x) { return x !== ss; }); saveDb(); renderSchedule();
         }));
         row.appendChild(mkBtn("Launch", "primary", function () { launchPlan(ss); }));
@@ -3217,12 +3267,21 @@
     rec.style = curStyle(); rec.opt = clone(settings.opt); rec.balance = !!settings.balance; rec.timer = settings.timer || 0;
     rec.gsex = clone(sel.gsex || {}); syncSeed(); rec.seed = sel.seed.slice();
     saveDb();
+    if (rec.online && onlineOn()) publish(rec).then(function () { toast("Sign-up page for “" + rec.name + "” updated.", true); }, function (e) { toast("Saved, but the sign-up page couldn't be updated: " + e.message); });
     endEdit();
     toast("“" + name + "” saved for " + fmtWhen(when) + ".", true);
   }
 
   // Start a scheduled session. Uses the normal start path, then puts the everyday setup back.
   function launchPlan(ss) {
+    var cs = ss.online && onlineOn() ? suCache[ss.id] : null;
+    if (cs && cs.data && cs.data.signups.length) {
+      var n1 = countIn(cs.data), n2 = countOut(cs.data);
+      if (confirm("Online sign-ups for “" + ss.name + "”: " + n1 + " coming, " + n2 + " can't make it.\n\nUpdate the player list from these answers before starting?")) applySignups(ss, cs.data, true);
+    }
+    doLaunch(ss);
+  }
+  function doLaunch(ss) {
     if (session && session.rounds.length && !(session.schedId === ss.id) &&
         !confirm("Another session is in progress" + (session.schedName ? " (“" + session.schedName + "”)" : "") +
           ". Launching “" + ss.name + "” will replace it. Continue?")) return;
@@ -3252,7 +3311,11 @@
     if (!confirm("Finish " + label + "? The rounds" + (session.hasBoard ? " and leaderboard" : "") +
       " will be cleared" + (session.schedId ? " and it will be removed from Scheduled sessions" : "") + ".")) return;
     saveResults();
-    if (session.schedId) { db.sessions = db.sessions.filter(function (x) { return x.id !== session.schedId; }); saveDb(); }
+    if (session.schedId) {
+      var fin = schedById(session.schedId);
+      if (fin && fin.online) takeDown(fin, true);
+      db.sessions = db.sessions.filter(function (x) { return x.id !== session.schedId; }); saveDb();
+    }
     session = null;
     showResume(); renderSchedule();
     toast("Session finished.", true);
@@ -3938,8 +4001,211 @@
 
   function inScoreBox() { return document.activeElement && document.activeElement.classList.contains("score"); }
 
+  // ---------- online sign-ups ----------
+  // The online service (a Cloudflare Worker with an EU-only database) holds published sessions,
+  // the invited players' short names, their answers and any email addresses players give.
+  var FD_API = "";          // set when the online service is deployed
+  function apiBase() {
+    try { var o = localStorage.getItem("fairDinkum.api"); if (o) return o.replace(/\/+$/, ""); } catch (e) {}
+    return FD_API;
+  }
+  function onlineOn() { return !KIOSK && !!apiBase() && !!(db.online && db.online.org && db.online.key); }
+  function apiCall(method, path, body) {
+    var h = { "Content-Type": "application/json" };
+    if (db.online && db.online.key) h.Authorization = "Bearer " + db.online.org + "." + db.online.key;
+    return fetch(apiBase() + path, { method: method, headers: h, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) { var e = new Error(j.error || "The online service said no (error " + r.status + ")."); e.status = r.status; throw e; }
+        return j;
+      });
+    }, function () { throw new Error("Couldn't reach the online service. Check the internet connection."); });
+  }
+  var suCache = {}, suCurrent = null;
+  function countIn(d) { return d.signups.filter(function (x) { return x.status === "in"; }).length; }
+  function countOut(d) { return d.signups.filter(function (x) { return x.status === "out"; }).length; }
+  function refreshSu(ss, force) {
+    var c = suCache[ss.id];
+    if (!force && c && (c.loading || Date.now() - c.at < 60000)) return Promise.resolve(c.data);
+    c = suCache[ss.id] = { at: Date.now(), data: c ? c.data : null, loading: true };
+    return apiCall("GET", "/api/org/session/" + encodeURIComponent(ss.id)).then(function (d) {
+      var before = JSON.stringify(c.data); c.data = d; c.loading = false;
+      if (before !== JSON.stringify(d)) { renderSchedule(); if (suCurrent === ss) renderSignups(); }
+      return d;
+    }, function (e) {
+      c.loading = false;
+      if (e.status === 404 && ss.online) { ss.online = null; saveDb(); renderSchedule(); }
+      throw e;
+    });
+  }
+  // Short names are shown publicly; full names only where two people would clash.
+  function publicNames(ids) {
+    var ps = ids.map(playerById).filter(Boolean), cnt = {};
+    ps.forEach(function (p) { var k = shortName(p.name).toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; });
+    return ps.map(function (p) { return { pid: p.id, name: cnt[shortName(p.name).toLowerCase()] > 1 ? p.name : shortName(p.name) }; });
+  }
+  function publish(ss) {
+    var starts = new Date(ss.when).getTime();
+    if (!isFinite(starts)) return Promise.reject(new Error("Give the session a date and time first (Edit)."));
+    return apiCall("PUT", "/api/org/session", { id: ss.id, name: ss.name, starts: starts, whenText: fmtWhen(ss.when), place: "",
+      remindHours: ss.online ? ss.online.remind : 24, invited: publicNames(ss.playerIds) }).then(function (r) {
+      ss.online = { remind: ss.online ? ss.online.remind : 24, link: r.link }; saveDb();
+      return refreshSu(ss, true).catch(function () {});
+    });
+  }
+  function takeDown(ss, quiet) {
+    var done = function () { ss.online = null; delete suCache[ss.id]; saveDb(); renderSchedule(); if (suCurrent === ss) renderSignups(); };
+    return apiCall("DELETE", "/api/org/session/" + encodeURIComponent(ss.id)).then(done, function (e) {
+      if (e.status === 404) { done(); return; }
+      if (!quiet) toast("Couldn't take the sign-up page down: " + e.message);
+    });
+  }
+  // Tick everyone coming (adding newcomers to the player list), untick those who can't make it.
+  function applySignups(ss, d, quiet) {
+    var added = 0, ticked = 0, unticked = 0;
+    d.signups.forEach(function (x) {
+      var p = playerById(x.pid);
+      if (!p && x.newcomer) {
+        if (x.status !== "in") return;
+        p = findPlayerByName(x.name);
+        if (!p) { p = { id: x.pid, name: x.name }; db.players.push(p); added++; }
+      }
+      if (!p) return;
+      var i = ss.playerIds.indexOf(p.id);
+      if (x.status === "in" && i < 0) { ss.playerIds.push(p.id); ticked++; }
+      if (x.status === "out" && i >= 0) { ss.playerIds.splice(i, 1); unticked++; ss.pairs = ss.pairs.filter(function (pr) { return pr.indexOf(p.id) < 0; }); }
+    });
+    saveDb(); renderSchedule();
+    if (!quiet || added || ticked || unticked) toast("Player list for “" + ss.name + "” updated: " + ticked + " added, " + unticked + " removed" + (added ? ", " + added + " new to the player list" : "") + ".", true);
+  }
+
+  function openOnline() { $("onlineErr").textContent = ""; renderOnline(); $("onlineDialog").classList.remove("hidden"); }
+  function closeOnline() { $("onlineDialog").classList.add("hidden"); }
+  function renderOnline() {
+    var b = $("onlineBody");
+    if (!apiBase()) { b.innerHTML = "<p>The online service hasn't been switched on yet, so there's nothing to connect to.</p>"; return; }
+    if (!onlineOn()) {
+      b.innerHTML = "<p>Enter the setup code to connect this copy of Fair Dinkum. (It's set when the online service is installed; ask whoever set it up.)</p>" +
+        "<div class='addrow'><input type='text' id='onlineCode' placeholder='Setup code' autocomplete='off'><button class='btn primary sm' id='onlineConnect'>Connect</button></div>" +
+        "<p class='muted'>What goes online: the name, date and time of each session you publish, the short names (e.g. “Paul C”) of the players invited, " +
+        "and their answers. Email addresses are only stored if players type their own and agree. Everything else stays on this device.</p>";
+      $("onlineConnect").addEventListener("click", connectOnline);
+      $("onlineCode").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); connectOnline(); } });
+      $("onlineCode").focus();
+      return;
+    }
+    b.innerHTML = "<p><b>Connected.</b> Each scheduled session now has a <b>Sign-ups</b> button for publishing its sign-up page.</p>" +
+      "<p class='muted'>The connection is saved in your player database, so it's included in backups. Disconnecting doesn't delete anything online; published pages stay up until they're taken down or 30 days after the session.</p>" +
+      "<div class='subtns'><button class='btn secondary sm' id='onlineOff'>Disconnect</button></div>";
+    $("onlineOff").addEventListener("click", function () {
+      if (!confirm("Disconnect this copy of Fair Dinkum from online sign-ups? You'll need the setup code to connect again.")) return;
+      delete db.online; saveDb(); renderOnline(); renderSchedule();
+    });
+  }
+  function connectOnline() {
+    var code = $("onlineCode").value.trim();
+    if (!code) { $("onlineErr").textContent = "Enter the setup code."; return; }
+    if (!canEdit()) return;
+    $("onlineErr").textContent = "";
+    apiCall("POST", "/api/org/register", { code: code, name: "Fair Dinkum" }).then(function (r) {
+      db.online = { org: r.org, key: r.key }; saveDb(); renderOnline(); renderSchedule();
+      toast("Connected to online sign-ups.", true);
+    }, function (e) { $("onlineErr").textContent = e.message; });
+  }
+
+  function openSignups(ss) {
+    suCurrent = ss; $("suErr").textContent = "";
+    $("suDialog").classList.remove("hidden");
+    renderSignups();
+    if (ss.online) refreshSu(ss, true).catch(function (e) { $("suErr").textContent = e.message; });
+  }
+  function closeSignups() { $("suDialog").classList.add("hidden"); suCurrent = null; }
+  function renderSignups() {
+    var ss = suCurrent; if (!ss) return;
+    $("suTitle").textContent = "Sign-ups: " + ss.name;
+    $("suSub").textContent = fmtWhen(ss.when) + " · " + ss.playerIds.length + " player" + (ss.playerIds.length === 1 ? "" : "s") + " on the list";
+    var b = $("suBody"); b.innerHTML = "";
+    var remindSel = function () {
+      var r = ss.online ? ss.online.remind : 24, opts = [[0, "No reminder"], [2, "2 hours before"], [12, "12 hours before"], [24, "24 hours before"], [48, "2 days before"]];
+      return "<label>Reminder email: <select id='suRemind'>" + opts.map(function (o) { return "<option value='" + o[0] + "'" + (o[0] === r ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>";
+    };
+    if (!ss.online) {
+      b.innerHTML = "<p>Publish a sign-up page so the players on this session's list can say whether they're coming. Anyone else can add their name too.</p>" +
+        "<p>" + remindSel() + "</p><p class='muted'>The page shows the session name, date and time, and the short names of the players on the list (e.g. “Paul C”).</p>" +
+        "<div class='subtns'><button class='btn primary sm' id='suPublish'>Publish sign-up page</button></div>";
+      $("suPublish").addEventListener("click", function () {
+        if (!canEdit()) return;
+        ss.online = { remind: +$("suRemind").value, link: "" };
+        $("suErr").textContent = "";
+        publish(ss).then(function () { renderSignups(); renderSchedule(); toast("Sign-up page published. Copy the link and share it.", true); },
+          function (e) { ss.online = null; $("suErr").textContent = e.message; });
+      });
+      return;
+    }
+    var c = suCache[ss.id], d = c && c.data;
+    var html = "<div class='kiosklink'><input type='text' id='suLink' readonly value='" + esc(ss.online.link || (d && d.link) || "") + "'>" +
+      "<button class='btn primary sm' id='suCopy'>Copy link</button>" + (navigator.share ? "<button class='btn secondary sm' id='suShare'>Share…</button>" : "") + "</div>";
+    if (!d) html += "<p class='muted'>Loading the answers…</p>";
+    else {
+      var byPid = {}; d.signups.forEach(function (x) { byPid[x.pid] = x; });
+      var rows = ss.playerIds.map(playerById).filter(Boolean).sort(byName).map(function (p) {
+        var x = byPid[p.id], cls = x ? x.status : "none";
+        return "<div class='" + cls + "'>" + (x ? (x.status === "in" ? "✓ " : "✗ ") : "· ") + esc(p.name) + "</div>";
+      });
+      d.signups.filter(function (x) { return !playerById(x.pid) || ss.playerIds.indexOf(x.pid) < 0; }).forEach(function (x) {
+        rows.push("<div class='" + x.status + "'>" + (x.status === "in" ? "✓ " : "✗ ") + esc(x.name) + (x.newcomer ? " (new)" : " (not on list)") + "</div>");
+      });
+      var nIn = countIn(d), nOut = countOut(d), none = Math.max(0, d.invited - d.signups.filter(function (x) { return !x.newcomer; }).length);
+      html += "<div class='sustat'><b>" + nIn + "</b> coming · <b>" + nOut + "</b> can't make it · <b>" + none + "</b> not answered yet</div>" +
+        "<div class='sulist'>" + rows.join("") + "</div>" +
+        "<p class='muted'>" + d.reachable + " of the " + d.invited + " players on the list have given an email address. " +
+        (d.invitedAt ? "Invites last sent " + new Date(d.invitedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + ". " : "") +
+        (d.reminded ? "Reminder sent." : "") + "</p>";
+    }
+    html += "<p>" + remindSel() + "</p>" +
+      "<div class='subtns'>" +
+      "<button class='btn primary sm' id='suApply'>Update player list from answers</button>" +
+      "<button class='btn secondary sm' id='suInvite'>Send invite emails</button>" +
+      "<button class='btn secondary sm' id='suRefresh'>Refresh</button>" +
+      "<button class='btn secondary sm' id='suDown'>Take page down</button></div>" +
+      "<p class='muted'>Invite emails go to players on the list who've given their address before and haven't answered yet. Changes to the session (Edit) update the page automatically.</p>";
+    b.innerHTML = html;
+    $("suCopy").addEventListener("click", function () {
+      var t = $("suLink"); t.focus(); t.select();
+      var ok = function () { toast("Sign-up link copied.", true); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(ok, function () { document.execCommand("copy"); ok(); });
+      else { document.execCommand("copy"); ok(); }
+    });
+    if ($("suShare")) $("suShare").addEventListener("click", function () {
+      navigator.share({ title: ss.name, text: ss.name + ", " + fmtWhen(ss.when) + ". Are you coming?", url: $("suLink").value }).catch(function () {});
+    });
+    $("suRemind").addEventListener("change", function () {
+      ss.online.remind = +$("suRemind").value; saveDb();
+      publish(ss).then(function () { toast("Reminder setting saved.", true); }, function (e) { $("suErr").textContent = e.message; });
+    });
+    $("suRefresh").addEventListener("click", function () { $("suErr").textContent = ""; refreshSu(ss, true).catch(function (e) { $("suErr").textContent = e.message; }); });
+    $("suApply").addEventListener("click", function () {
+      var dd = suCache[ss.id] && suCache[ss.id].data;
+      if (!dd || !dd.signups.length) { toast("No answers yet."); return; }
+      if (!canEdit()) return;
+      if (!confirm("Tick the " + countIn(dd) + " coming and untick the " + countOut(dd) + " who can't make it? Players who haven't answered stay as they are.")) return;
+      applySignups(ss, dd); renderSignups();
+    });
+    $("suInvite").addEventListener("click", function () {
+      $("suErr").textContent = "";
+      apiCall("POST", "/api/org/session/" + encodeURIComponent(ss.id) + "/invite").then(function (r) {
+        toast(r.sent ? r.sent + " invite email" + (r.sent === 1 ? "" : "s") + " sent." + (r.overLimit ? " The daily email limit stopped the rest; try again tomorrow." : "") :
+          "No invites to send: nobody on the list who hasn't answered has given an email address yet.", !!r.sent);
+        refreshSu(ss, true).catch(function () {});
+      }, function (e) { $("suErr").textContent = e.message; });
+    });
+    $("suDown").addEventListener("click", function () {
+      if (!confirm("Take the sign-up page for “" + ss.name + "” down? Its answers will be deleted (the player list here isn't changed).")) return;
+      takeDown(ss);
+    });
+  }
+
   // ---------- help ----------
-  var HELP_HTML = "<p>Fair Dinkum organises recreational play: who plays where, with whom, and who sits out. Pick a <b>Format<\/b> (Doubles, Singles or Teams), a <b>Play style<\/b>, the courts and the players, then press <b>Start session<\/b>.<\/p>\n<div class=\"toc\">\n  <a href=\"#h-start\">Getting started<\/a><a href=\"#h-keys\">Keys and buttons<\/a><a href=\"#h-styles\">Play styles<\/a>\n  <a href=\"#h-rotation\">Rotation<\/a><a href=\"#h-seeded\">Seeded<\/a><a href=\"#h-mixed\">Mixed doubles<\/a><a href=\"#h-combo\">Combo<\/a>\n  <a href=\"#h-scramble\">Scramble<\/a><a href=\"#h-ladder\">Ladder<\/a><a href=\"#h-throne\">Claim the Throne<\/a><a href=\"#h-river\">Up &amp; Down the River<\/a>\n  <a href=\"#h-cream\">Cream of the Crop<\/a><a href=\"#h-challenge\">Challenge court<\/a><a href=\"#h-compass\">Compass draw<\/a><a href=\"#h-double\">Double elimination<\/a>\n  <a href=\"#h-results\">Scores and winners<\/a><a href=\"#h-board\">Leaderboard and summary<\/a><a href=\"#h-shuffle\">Shuffle<\/a><a href=\"#h-timer\">Round timer<\/a>\n  <a href=\"#h-past\">Past results<\/a><a href=\"#h-changes\">Changing players<\/a><a href=\"#h-data\">Your data<\/a>\n<\/div>\n\n<h3 id=\"h-start\">Getting started<\/h3>\n<ul>\n  <li><b>Format:<\/b> Doubles (partners change), Singles (1 v 1) or Teams (fixed pairs you make under <i>Pairs<\/i>).<\/li>\n  <li><b>Courts:<\/b> how many, and their names. In styles with a <b>top court<\/b> (Seeded, Ladder, Claim the Throne, River, Cream), the first court in the list is the top court.<\/li>\n  <li><b>Who's playing:<\/b> tick players (or a group), or type a name to add someone. <b>Players &amp; groups\u2026<\/b> manages the full list.<\/li>\n  <li><b>Scheduled sessions:<\/b> set up a session in advance with <b>+ Schedule a session<\/b>, then <b>Launch<\/b> it on the day.<\/li>\n<\/ul>\n\n<h3 id=\"h-keys\">Keys and buttons during a session<\/h3>\n<ul>\n  <li><b>Space<\/b> next round \u00b7 <b>Backspace<\/b> previous round \u00b7 <b>E<\/b> add or remove players \u00b7 <b>S<\/b> shuffle this round \u00b7 <b>T<\/b> pause or restart the timer \u00b7 <b>F1<\/b> or <b>L<\/b> leaderboard \u00b7 <b>H<\/b> this help \u00b7 <b>Esc<\/b> back to setup (the session is kept; <b>Resume<\/b> to carry on).<\/li>\n  <li>On a phone or tablet, turn on <b>On-screen buttons<\/b> for Back, Next, Players, Shuffle, Leaderboard and End.<\/li>\n<\/ul>\n\n<h3 id=\"h-styles\">Play styles<\/h3>\n<p>Some styles only work with some formats; the list shows the ones that fit. Styles marked <i>results<\/i> need a winner for every game before the next round: enter scores (with <b>Keep score<\/b>) or tap the winning side. The rules below are Fair Dinkum's versions of these formats; where a style has settings, they appear under <b>Play style<\/b>.<\/p>\n\n<h4 id=\"h-rotation\">Rotation (random mix): Doubles, Singles, Teams<\/h4>\n<p>Everyone gets the same number of sit-outs (give or take one), never two in a row where avoidable, and partners and opponents are mixed up as much as possible.<\/p>\n<div class=\"set\">Setting: <b>Balance courts using past results<\/b>: makes the two sides on each court more even, using win rates from earlier sessions.<\/div>\n\n<h4 id=\"h-seeded\">Seeded: all formats \u00b7 results<\/h4>\n<p>Put players in order (1 = strongest). The top group plays on the top court, the next group on the next, and so on. After every round everyone is re-ranked by win rate, then points margin per game (players who haven't played yet count as 50%). Sit-outs stay fair and partners still rotate within each group.<\/p>\n\n<h4 id=\"h-mixed\">Mixed doubles: Doubles<\/h4>\n<p>Every pair is a man and a woman. Set each player as Man or Woman under <b>Men and women<\/b> (it's remembered). If the numbers don't match, spare players fill men's or women's courts; sit-outs are shared fairly among the men and among the women.<\/p>\n\n<h4 id=\"h-combo\">Combo: Doubles<\/h4>\n<p>Rounds alternate: mixed pairs one round, men's and women's doubles the next (as far as the numbers allow).<\/p>\n\n<h4 id=\"h-scramble\">Scramble: Doubles<\/h4>\n<p>Players are put in groups of 4 per court and stay together for a <b>round of games<\/b>, playing with each partner in turn (3 games = everyone partners everyone on that court once). Then new groups are made, keeping apart people who've already played together.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3). <b>Courts of 5<\/b> (default on): spare players join a court as a fifth, and one person rests each game, instead of sitting out the whole round.<\/div>\n\n<h4 id=\"h-ladder\">Ladder (King of the court): Doubles \u00b7 results<\/h4>\n<p>Everyone plays every round, so you need a multiple of 4 players and enough courts. Round 1 is random. After that, winners move up a court and losers move down; the two who arrive on a court together are split up and play against each other. Top-court winners and bottom-court losers stay put.<\/p>\n\n<h4 id=\"h-throne\">Claim the Throne: Doubles \u00b7 results<\/h4>\n<p>A ladder (as above) that starts from your seeding: the top four on the top court, playing 1 &amp; 4 v 2 &amp; 3, and so on down. Each win earns points: on 3 courts, a win is worth 3 on the top court, 2 on the middle and 1 on the bottom. Ranked by points, then win rate, then points margin per game.<\/p>\n\n<h4 id=\"h-river\">Up &amp; Down the River: Doubles \u00b7 results<\/h4>\n<p>Seeded groups of 4 play a round of games on their court (each partnership once). Then the best player in each group (most wins, then points margin) moves up a court and the worst moves down. Points as in Claim the Throne.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3), <b>courts of 5<\/b> (default on), and <b>players moving<\/b> each way (1 or 2; default 1).<\/div>\n\n<h4 id=\"h-cream\">Cream of the Crop: Doubles \u00b7 results<\/h4>\n<p>Round 1 groups each get a mix of strong and weaker players (from your seeding). After round 1, everyone is sorted onto courts by results: the best four on the top court, and so on. From then on, the top two in each group move up a court and the bottom two move down. Points as in Claim the Throne.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3) and <b>courts of 5<\/b>.<\/div>\n\n<h4 id=\"h-challenge\">Challenge court: Doubles, Singles, Teams \u00b7 results<\/h4>\n<p>Like a paddle stack. Round 1 is a random draw and everyone else joins the queue (shown as <b>Next up<\/b>). Winners stay on; losers go to the back of the queue and the next in the queue come on to challenge. In doubles, the next two in the queue play as partners. After a set number of wins in a row, the winners come off too (behind the losers in the queue).<\/p>\n<div class=\"set\">Setting: <b>Winners come off after<\/b> 3 wins in a row (0 = winners can stay on for ever).<\/div>\n\n<h4 id=\"h-compass\">Knockout: Compass draw: Singles, Teams \u00b7 results<\/h4>\n<p>Put the entrants in draw order (1 = top seed); top seeds are kept apart. Any number can enter: the draw is filled up with byes, which go to the top seeds. Winners carry on in the East draw; first-round losers start the West draw, and each later round's losers start a new draw (North, South, Northeast\u2026). Everyone plays every round and every finishing place is decided.<\/p>\n\n<h4 id=\"h-double\">Knockout: Double elimination: Singles, Teams \u00b7 results<\/h4>\n<p>Two defeats and you're out. Losers in the winners' bracket drop into the losers' bracket. The two bracket winners meet in the grand final. Byes as in the Compass draw.<\/p>\n<div class=\"set\">Setting: <b>Decider<\/b> (default on): if the losers' bracket winner wins the grand final, both have lost once, so a deciding final is played.<\/div>\n<p>In both knockouts, games are put on courts as soon as both players are known, earliest rounds first; anyone without a game that round shows under <b>Waiting<\/b>.<\/p>\n\n<h3 id=\"h-results\">Scores and winners<\/h3>\n<ul>\n  <li><b>Keep score<\/b>: type each court's score (Enter moves to the next box). Ties aren't allowed. The next round won't start until every court has a score.<\/li>\n  <li>Styles that need results but aren't scored: <b>tap the winning side<\/b> on each court (tap again to undo).<\/li>\n  <li>In styles where results decide the next round (Ladder, Throne, River, Cream, Challenge, knockouts), only the latest round's results can be changed.<\/li>\n<\/ul>\n\n<h3 id=\"h-board\">Leaderboard and session summary<\/h3>\n<ul>\n  <li><b>F1<\/b> or <b>L<\/b> shows the leaderboard (when there are scores or winners). Each style ranks its own way; the rule is shown at the top.<\/li>\n  <li>Click (or tap) a name to see all their games: round, court, partner, opponents and result.<\/li>\n  <li><b>Session summary<\/b> (on the leaderboard, or <b>Summary<\/b> on the setup screen) lists the standings and every round. <b>Print<\/b> it, or <b>Save as file<\/b> to keep a copy.<\/li>\n<\/ul>\n\n<h3 id=\"h-shuffle\">Shuffle<\/h3>\n<p><b>S<\/b> (or the Shuffle button) redraws the latest round, for when people don't like the draw. It's available in Rotation, Seeded, Mixed and Combo; in Scramble on the first game of a round; and in Ladder and Challenge court for round 1 only. In the other styles the seeding and results decide who plays where.<\/p>\n\n<h3 id=\"h-timer\">Round timer<\/h3>\n<p>Set <b>Round timer<\/b> to a number of minutes (0 = off). A countdown shows during the session and restarts with each new round. Click it (or press <b>T<\/b>) to pause or carry on. At zero it flashes <b>Time!<\/b> and beeps.<\/p>\n\n<h3 id=\"h-past\">Past results<\/h3>\n<p>Results from sessions with scores or tapped winners are stored with each player (games, wins and points margin). They're used for <b>Balance courts using past results<\/b> and the <b>Order by past results<\/b> button on seeding lists, and shown on the Players &amp; groups screen. Guests' results aren't kept. <b>Clear past results\u2026<\/b> on Players &amp; groups removes them all.<\/p>\n\n<h3 id=\"h-changes\">Changing players during a session<\/h3>\n<ul>\n  <li>Press <b>E<\/b> (or Players) to tick off people who've left and add late arrivals. Changes apply from the next new round.<\/li>\n  <li>Ladder and Claim the Throne need everyone playing, so changing players ends them and switches to Rotation.<\/li>\n  <li>Scramble, River and Cream start new groups at the next round.<\/li>\n  <li>Knockouts: nobody new can join; a player who leaves loses their remaining games by walkover.<\/li>\n  <li>Mixed and Combo: say whether a new player is a man or a woman.<\/li>\n<\/ul>\n\n<h3 id=\"h-data\">Your data<\/h3>\n<p>Players, groups, scheduled sessions and past results are kept on this device: in the database folder you choose (with automatic backups), and in the browser. Nothing is sent anywhere. Kiosk mode uses a copy of the player list and forgets changes when it restarts.<\/p>\n";
+  var HELP_HTML = "<p>Fair Dinkum organises recreational play: who plays where, with whom, and who sits out. Pick a <b>Format<\/b> (Doubles, Singles or Teams), a <b>Play style<\/b>, the courts and the players, then press <b>Start session<\/b>.<\/p>\n<div class=\"toc\">\n  <a href=\"#h-start\">Getting started<\/a><a href=\"#h-keys\">Keys and buttons<\/a><a href=\"#h-styles\">Play styles<\/a>\n  <a href=\"#h-rotation\">Rotation<\/a><a href=\"#h-seeded\">Seeded<\/a><a href=\"#h-mixed\">Mixed doubles<\/a><a href=\"#h-combo\">Combo<\/a>\n  <a href=\"#h-scramble\">Scramble<\/a><a href=\"#h-ladder\">Ladder<\/a><a href=\"#h-throne\">Claim the Throne<\/a><a href=\"#h-river\">Up &amp; Down the River<\/a>\n  <a href=\"#h-cream\">Cream of the Crop<\/a><a href=\"#h-challenge\">Challenge court<\/a><a href=\"#h-compass\">Compass draw<\/a><a href=\"#h-double\">Double elimination<\/a>\n  <a href=\"#h-results\">Scores and winners<\/a><a href=\"#h-board\">Leaderboard and summary<\/a><a href=\"#h-shuffle\">Shuffle<\/a><a href=\"#h-timer\">Round timer<\/a>\n  <a href=\"#h-online\">Online sign-ups<\/a><a href=\"#h-past\">Past results<\/a><a href=\"#h-changes\">Changing players<\/a><a href=\"#h-data\">Your data<\/a>\n<\/div>\n\n<h3 id=\"h-start\">Getting started<\/h3>\n<ul>\n  <li><b>Format:<\/b> Doubles (partners change), Singles (1 v 1) or Teams (fixed pairs you make under <i>Pairs<\/i>).<\/li>\n  <li><b>Courts:<\/b> how many, and their names. In styles with a <b>top court<\/b> (Seeded, Ladder, Claim the Throne, River, Cream), the first court in the list is the top court.<\/li>\n  <li><b>Who's playing:<\/b> tick players (or a group), or type a name to add someone. <b>Players &amp; groups\u2026<\/b> manages the full list.<\/li>\n  <li><b>Scheduled sessions:<\/b> set up a session in advance with <b>+ Schedule a session<\/b>, then <b>Launch<\/b> it on the day.<\/li>\n<\/ul>\n\n<h3 id=\"h-keys\">Keys and buttons during a session<\/h3>\n<ul>\n  <li><b>Space<\/b> next round \u00b7 <b>Backspace<\/b> previous round \u00b7 <b>E<\/b> add or remove players \u00b7 <b>S<\/b> shuffle this round \u00b7 <b>T<\/b> pause or restart the timer \u00b7 <b>F1<\/b> or <b>L<\/b> leaderboard \u00b7 <b>H<\/b> this help \u00b7 <b>Esc<\/b> back to setup (the session is kept; <b>Resume<\/b> to carry on).<\/li>\n  <li>On a phone or tablet, turn on <b>On-screen buttons<\/b> for Back, Next, Players, Shuffle, Leaderboard and End.<\/li>\n<\/ul>\n\n<h3 id=\"h-styles\">Play styles<\/h3>\n<p>Some styles only work with some formats; the list shows the ones that fit. Styles marked <i>results<\/i> need a winner for every game before the next round: enter scores (with <b>Keep score<\/b>) or tap the winning side. The rules below are Fair Dinkum's versions of these formats; where a style has settings, they appear under <b>Play style<\/b>.<\/p>\n\n<h4 id=\"h-rotation\">Rotation (random mix): Doubles, Singles, Teams<\/h4>\n<p>Everyone gets the same number of sit-outs (give or take one), never two in a row where avoidable, and partners and opponents are mixed up as much as possible.<\/p>\n<div class=\"set\">Setting: <b>Balance courts using past results<\/b>: makes the two sides on each court more even, using win rates from earlier sessions.<\/div>\n\n<h4 id=\"h-seeded\">Seeded: all formats \u00b7 results<\/h4>\n<p>Put players in order (1 = strongest). The top group plays on the top court, the next group on the next, and so on. After every round everyone is re-ranked by win rate, then points margin per game (players who haven't played yet count as 50%). Sit-outs stay fair and partners still rotate within each group.<\/p>\n\n<h4 id=\"h-mixed\">Mixed doubles: Doubles<\/h4>\n<p>Every pair is a man and a woman. Set each player as Man or Woman under <b>Men and women<\/b> (it's remembered). If the numbers don't match, spare players fill men's or women's courts; sit-outs are shared fairly among the men and among the women.<\/p>\n\n<h4 id=\"h-combo\">Combo: Doubles<\/h4>\n<p>Rounds alternate: mixed pairs one round, men's and women's doubles the next (as far as the numbers allow).<\/p>\n\n<h4 id=\"h-scramble\">Scramble: Doubles<\/h4>\n<p>Players are put in groups of 4 per court and stay together for a <b>round of games<\/b>, playing with each partner in turn (3 games = everyone partners everyone on that court once). Then new groups are made, keeping apart people who've already played together.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3). <b>Courts of 5<\/b> (default on): spare players join a court as a fifth, and one person rests each game, instead of sitting out the whole round.<\/div>\n\n<h4 id=\"h-ladder\">Ladder (King of the court): Doubles \u00b7 results<\/h4>\n<p>Everyone plays every round, so you need a multiple of 4 players and enough courts. Round 1 is random. After that, winners move up a court and losers move down; the two who arrive on a court together are split up and play against each other. Top-court winners and bottom-court losers stay put.<\/p>\n\n<h4 id=\"h-throne\">Claim the Throne: Doubles \u00b7 results<\/h4>\n<p>A ladder (as above) that starts from your seeding: the top four on the top court, playing 1 &amp; 4 v 2 &amp; 3, and so on down. Each win earns points: on 3 courts, a win is worth 3 on the top court, 2 on the middle and 1 on the bottom. Ranked by points, then win rate, then points margin per game.<\/p>\n\n<h4 id=\"h-river\">Up &amp; Down the River: Doubles \u00b7 results<\/h4>\n<p>Seeded groups of 4 play a round of games on their court (each partnership once). Then the best player in each group (most wins, then points margin) moves up a court and the worst moves down. Points as in Claim the Throne.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3), <b>courts of 5<\/b> (default on), and <b>players moving<\/b> each way (1 or 2; default 1).<\/div>\n\n<h4 id=\"h-cream\">Cream of the Crop: Doubles \u00b7 results<\/h4>\n<p>Round 1 groups each get a mix of strong and weaker players (from your seeding). After round 1, everyone is sorted onto courts by results: the best four on the top court, and so on. From then on, the top two in each group move up a court and the bottom two move down. Points as in Claim the Throne.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3) and <b>courts of 5<\/b>.<\/div>\n\n<h4 id=\"h-challenge\">Challenge court: Doubles, Singles, Teams \u00b7 results<\/h4>\n<p>Like a paddle stack. Round 1 is a random draw and everyone else joins the queue (shown as <b>Next up<\/b>). Winners stay on; losers go to the back of the queue and the next in the queue come on to challenge. In doubles, the next two in the queue play as partners. After a set number of wins in a row, the winners come off too (behind the losers in the queue).<\/p>\n<div class=\"set\">Setting: <b>Winners come off after<\/b> 3 wins in a row (0 = winners can stay on for ever).<\/div>\n\n<h4 id=\"h-compass\">Knockout: Compass draw: Singles, Teams \u00b7 results<\/h4>\n<p>Put the entrants in draw order (1 = top seed); top seeds are kept apart. Any number can enter: the draw is filled up with byes, which go to the top seeds. Winners carry on in the East draw; first-round losers start the West draw, and each later round's losers start a new draw (North, South, Northeast\u2026). Everyone plays every round and every finishing place is decided.<\/p>\n\n<h4 id=\"h-double\">Knockout: Double elimination: Singles, Teams \u00b7 results<\/h4>\n<p>Two defeats and you're out. Losers in the winners' bracket drop into the losers' bracket. The two bracket winners meet in the grand final. Byes as in the Compass draw.<\/p>\n<div class=\"set\">Setting: <b>Decider<\/b> (default on): if the losers' bracket winner wins the grand final, both have lost once, so a deciding final is played.<\/div>\n<p>In both knockouts, games are put on courts as soon as both players are known, earliest rounds first; anyone without a game that round shows under <b>Waiting<\/b>.<\/p>\n\n<h3 id=\"h-results\">Scores and winners<\/h3>\n<ul>\n  <li><b>Keep score<\/b>: type each court's score (Enter moves to the next box). Ties aren't allowed. The next round won't start until every court has a score.<\/li>\n  <li>Styles that need results but aren't scored: <b>tap the winning side<\/b> on each court (tap again to undo).<\/li>\n  <li>In styles where results decide the next round (Ladder, Throne, River, Cream, Challenge, knockouts), only the latest round's results can be changed.<\/li>\n<\/ul>\n\n<h3 id=\"h-board\">Leaderboard and session summary<\/h3>\n<ul>\n  <li><b>F1<\/b> or <b>L<\/b> shows the leaderboard (when there are scores or winners). Each style ranks its own way; the rule is shown at the top.<\/li>\n  <li>Click (or tap) a name to see all their games: round, court, partner, opponents and result.<\/li>\n  <li><b>Session summary<\/b> (on the leaderboard, or <b>Summary<\/b> on the setup screen) lists the standings and every round. <b>Print<\/b> it, or <b>Save as file<\/b> to keep a copy.<\/li>\n<\/ul>\n\n<h3 id=\"h-shuffle\">Shuffle<\/h3>\n<p><b>S<\/b> (or the Shuffle button) redraws the latest round, for when people don't like the draw. It's available in Rotation, Seeded, Mixed and Combo; in Scramble on the first game of a round; and in Ladder and Challenge court for round 1 only. In the other styles the seeding and results decide who plays where.<\/p>\n\n<h3 id=\"h-timer\">Round timer<\/h3>\n<p>Set <b>Round timer<\/b> to a number of minutes (0 = off). A countdown shows during the session and restarts with each new round. Click it (or press <b>T<\/b>) to pause or carry on. At zero it flashes <b>Time!<\/b> and beeps.<\/p>\n\n<h3 id=\"h-online\">Online sign-ups<\/h3>\n<p>Players can say whether they're coming to a scheduled session from their phone, and get email invites and reminders.<\/p>\n<ul>\n  <li><b>Connect once:<\/b> Players &amp; groups \u203a <b>Online sign-ups\u2026<\/b>, then enter the setup code.<\/li>\n  <li><b>Publish a session:<\/b> on a scheduled session, click <b>Sign-ups<\/b> \u203a <b>Publish sign-up page<\/b>, then <b>Copy link<\/b> (or <b>Share\u2026<\/b>) and send it to the group, e.g. on WhatsApp.<\/li>\n  <li><b>Players<\/b> open the link, tap their name and choose <b>I'm in<\/b> or <b>Can't make it<\/b>. Anyone not on the list can add their name. They can give an email address (and must tick to agree) to get a confirmation, a reminder before the session (24 hours by default) and invites to future sessions.<\/li>\n  <li><b>Invites:<\/b> <b>Send invite emails<\/b> emails the players on the list who've given an address before and haven't answered yet. The first time, share the link yourself.<\/li>\n  <li><b>Answers:<\/b> the Sign-ups window shows who's coming. <b>Update player list from answers<\/b> ticks those coming (adding newcomers to your player list) and unticks those who can't. When you <b>Launch<\/b> the session you're offered the same.<\/li>\n  <li>Editing the session updates its page. Finishing or deleting the session takes the page down; otherwise it's deleted 30 days after the session.<\/li>\n  <li>Anyone with the link can see the short names on the list (e.g. \u201cPaul C\u201d) and the answers, and could change an answer, so share it only with your group.<\/li>\n  <li>What's stored online (in the EU): the session's name and time, the short names on the list, the answers, and email addresses players give. Every email has a link to stop emails and delete the address.<\/li>\n<\/ul>\n\n<h3 id=\"h-past\">Past results<\/h3>\n<p>Results from sessions with scores or tapped winners are stored with each player (games, wins and points margin). They're used for <b>Balance courts using past results<\/b> and the <b>Order by past results<\/b> button on seeding lists, and shown on the Players &amp; groups screen. Guests' results aren't kept. <b>Clear past results\u2026<\/b> on Players &amp; groups removes them all.<\/p>\n\n<h3 id=\"h-changes\">Changing players during a session<\/h3>\n<ul>\n  <li>Press <b>E<\/b> (or Players) to tick off people who've left and add late arrivals. Changes apply from the next new round.<\/li>\n  <li>Ladder and Claim the Throne need everyone playing, so changing players ends them and switches to Rotation.<\/li>\n  <li>Scramble, River and Cream start new groups at the next round.<\/li>\n  <li>Knockouts: nobody new can join; a player who leaves loses their remaining games by walkover.<\/li>\n  <li>Mixed and Combo: say whether a new player is a man or a woman.<\/li>\n<\/ul>\n<h3 id=\"h-dupr\">DUPR IDs<\/h3>\n<ul>\n  <li>Players &amp; groups \u203a <b>DUPR ID<\/b> on a player stores their DUPR ID, ready for exporting results to DUPR.<\/li>\n<\/ul>\n\n<h3 id=\"h-data\">Your data<\/h3>\n<p>Players, groups, scheduled sessions and past results are kept on this device: in the database folder you choose (with automatic backups), and in the browser. Nothing is sent anywhere unless you use <b>Online sign-ups<\/b> (see above). Kiosk mode uses a copy of the player list and forgets changes when it restarts.<\/p>\n";
   function openHelp(topic) {
     var body = $("helpBody");
     if (!body.dataset.done) {
@@ -4130,6 +4396,11 @@
   $("sumPrint").addEventListener("click", printSummary);
   $("pdClose").addEventListener("click", closePd);
   $("helpClose").addEventListener("click", closeHelp);
+  $("onlineBtn").addEventListener("click", openOnline);
+  $("onlineClose").addEventListener("click", closeOnline);
+  $("suClose").addEventListener("click", closeSignups);
+  $("onlineDialog").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); closeOnline(); } });
+  $("suDialog").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); closeSignups(); } });
   $("resumeBtn").addEventListener("click", function () { view = session.rounds.length - 1; enterRun(); });
   $("addBtn").addEventListener("click", addPending);
   $("editApply").addEventListener("click", applyEdit);

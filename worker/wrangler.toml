@@ -1,0 +1,16 @@
+name = "fair-dinkum"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+[vars]
+JOIN_URL = "https://bunglebogs.github.io/fair-dinkum/join.html"
+SENDER_NAME = "Fair Dinkum"
+DAILY_EMAIL_LIMIT = "280"
+
+[triggers]
+crons = ["7 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fair-dinkum"
+database_id = "REPLACE_WITH_DATABASE_ID"

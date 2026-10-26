@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign up · Fair Dinkum</title>
+<meta name="theme-color" content="#d7f23a">
+<link rel="icon" href="icons/favicon-64.png">
+<style>
+  :root { --bg: #eef1f4; --panel: #fff; --panel-2: #e6eaee; --line: #c9d2da; --text: #111a22; --muted: #56636f;
+    --ball: #d7f23a; --ink: #3f5c00; --ok: #1b8a4b; --danger: #c62828; font-family: "Segoe UI", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); }
+  main { max-width: 620px; margin: 0 auto; padding: 22px 16px 40px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-weight: 700; color: var(--muted); }
+  .dot { width: 24px; height: 24px; border-radius: 50%; background: var(--ball); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  .when { font-size: 17px; font-weight: 600; color: var(--ink); }
+  .muted { color: var(--muted); font-size: 14px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 10px; }
+  .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .nm { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel);
+    border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 16px; cursor: pointer; text-align: left; color: var(--text); }
+  .nm:hover { border-color: var(--ink); }
+  .nm.me { background: color-mix(in srgb, var(--ball) 45%, white); border-color: var(--ink); font-weight: 700; }
+  .st { font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .st.in { color: var(--ok); } .st.out { color: var(--danger); }
+  .btn { border: 0; border-radius: 10px; padding: 13px 20px; font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
+  .btn.in { background: var(--ball); color: #111; }
+  .btn.out { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  .btn:disabled { opacity: .5; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .row .btn { flex: 1; min-width: 140px; }
+  input[type=text], input[type=email] { width: 100%; font: inherit; font-size: 16px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+  label.chk { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; margin-top: 10px; line-height: 1.4; }
+  label.chk input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--ink); }
+  .msg { padding: 12px 14px; border-radius: 10px; margin-top: 12px; font-weight: 600; }
+  .msg.ok { background: #e3f4e9; color: #145c33; } .msg.bad { background: #fde8e8; color: var(--danger); }
+  .linkbtn { background: none; border: 0; color: #2563c9; text-decoration: underline; cursor: pointer; font: inherit; font-size: 15px; padding: 0; }
+  .hidden { display: none !important; }
+  .counts { font-size: 15px; margin: 2px 0 12px; }
+  .counts b { color: var(--ink); }
+  footer { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><div class="dot"></div>Fair Dinkum</div>
+  <div class="card" id="loading">Loading…</div>
+  <div class="card hidden" id="problem"></div>
+  <div id="content" class="hidden">
+    <div class="card">
+      <h1 id="title"></h1>
+      <div class="when" id="when"></div>
+      <div class="muted" id="place"></div>
+    </div>
+    <div class="card" id="answer">
+      <h2 id="ansTitle">Who are you?</h2>
+      <div id="pickHint" class="muted" style="margin-bottom:10px">Tap your name.</div>
+      <div id="chosen" class="hidden">
+        <div style="font-size:18px">You're <b id="chosenName"></b> <button class="linkbtn" id="notMe">Not you?</button></div>
+        <div class="muted" id="current"></div>
+        <div id="emailBox" class="hidden" style="margin-top:12px">
+          <input type="email" id="email" placeholder="Email (optional) for invites and reminders" autocomplete="email">
+          <label class="chk"><input type="checkbox" id="consent"> <span>Email me invites and reminders for this group's sessions. I can stop them at any time with the link in every email.</span></label>
+        </div>
+        <div id="newBox" class="hidden" style="margin-top:12px">
+          <input type="text" id="newName" placeholder="Your name (first name and surname)" autocomplete="name" maxlength="60">
+        </div>
+        <div class="row">
+          <button class="btn in" id="btnIn">I'm in</button>
+          <button class="btn out" id="btnOut">Can't make it</button>
+        </div>
+        <div id="result"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Who's coming</h2>
+      <div class="counts" id="counts"></div>
+      <div class="names" id="names"></div>
+      <div style="margin-top:12px"><button class="linkbtn" id="notListed">My name isn't on the list</button></div>
+    </div>
+    <footer>
+      Your name and answer can be seen by anyone with this link. An email address, if you give one, is only used to send this group's
+      invites and reminders. It's stored in the EU and deleted when you click "Stop these emails" in any email.
+      <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a>.
+    </footer>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  // Address of the Fair Dinkum online service (set when it's deployed).
+  var API = "";
+  var $ = function (id) { return document.getElementById(id); };
+  var q = new URLSearchParams(location.search);
+  if (q.get("api")) API = q.get("api").replace(/\/+$/, "");          // testing only
+  var S = q.get("s") || "", O = q.get("o") || "", T = q.get("t") || "";
+  var ME_KEY = "fairDinkum.join." + O;
+  var data = null, me = null, isNew = false;
+
+  function problem(msg) { $("loading").classList.add("hidden"); $("content").classList.add("hidden"); var p = $("problem"); p.textContent = msg; p.classList.remove("hidden"); }
+  function api(path, opts) {
+    return fetch(API + path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || "Something went wrong. Try again."); return j; });
+    });
+  }
+  function remembered() { try { return localStorage.getItem(ME_KEY) || ""; } catch (e) { return ""; } }
+  function remember(pid) { try { localStorage.setItem(ME_KEY, pid); } catch (e) {} }
+  function forget() { try { localStorage.removeItem(ME_KEY); } catch (e) {} }
+
+  function load() {
+    if (!API) return problem("Online sign-ups aren't switched on yet. Ask your organiser.");
+    if (!S || !O || !T) return problem("This sign-up link is incomplete. Ask your organiser for the link again.");
+    api("/api/session?s=" + encodeURIComponent(S) + "&o=" + encodeURIComponent(O) + "&t=" + encodeURIComponent(T)).then(function (d) {
+      data = d;
+      $("loading").classList.add("hidden"); $("content").classList.remove("hidden");
+      $("title").textContent = d.name; document.title = d.name + " · Sign up";
+      $("when").textContent = d.whenText; $("place").textContent = d.place || "";
+      if (d.past) { $("answer").classList.add("hidden"); }
+      if (!me) {
+        var want = q.get("p") || remembered();
+        var hit = d.players.filter(function (p) { return p.pid === want; })[0];
+        if (hit) { me = hit; isNew = false; }
+      } else {
+        me = d.players.filter(function (p) { return p.pid === me.pid; })[0] || null;
+      }
+      render();
+    }).catch(function (e) { problem(e.message === "Failed to fetch" ? "Couldn't reach the sign-up service. Check your internet connection and try again." : e.message); });
+  }
+
+  function statusText(st) { return st === "in" ? "✓ In" : st === "out" ? "✗ Out" : ""; }
+  function render() {
+    var nIn = data.players.filter(function (p) { return p.status === "in"; }).length;
+    var nOut = data.players.filter(function (p) { return p.status === "out"; }).length;
+    $("counts").innerHTML = "<b>" + nIn + "</b> coming · <b>" + nOut + "</b> can't make it · " + (data.players.length - nIn - nOut) + " not answered";
+    var box = $("names"); box.innerHTML = "";
+    data.players.forEach(function (p) {
+      var b = document.createElement("button"); b.className = "nm" + (me && me.pid === p.pid ? " me" : "");
+      var n = document.createElement("span"); n.textContent = p.name; b.appendChild(n);
+      var s = document.createElement("span"); s.className = "st " + (p.status || ""); s.textContent = statusText(p.status); b.appendChild(s);
+      b.addEventListener("click", function () { if (data.past) return; me = p; isNew = false; $("result").innerHTML = ""; render(); $("answer").scrollIntoView({ behavior: "smooth" }); });
+      box.appendChild(b);
+    });
+    var chosen = !!(me || isNew);
+    $("chosen").classList.toggle("hidden", !chosen);
+    $("pickHint").classList.toggle("hidden", chosen);
+    $("ansTitle").textContent = chosen ? "Your answer" : "Who are you?";
+    $("newBox").classList.toggle("hidden", !isNew);
+    if (isNew) { $("chosenName").textContent = "new here"; $("current").textContent = ""; }
+    else if (me) {
+      $("chosenName").textContent = me.name;
+      $("current").textContent = me.status === "in" ? "You've said you're coming." : me.status === "out" ? "You've said you can't make it." : "You haven't answered yet.";
+    }
+    $("emailBox").classList.toggle("hidden", !chosen || (me && me.hasEmail));
+  }
+
+  function answer(status) {
+    var body = { s: S, o: O, t: T, status: status };
+    if (isNew) {
+      body.name = $("newName").value.trim();
+      if (body.name.length < 2) { show("Type your name first.", false); return; }
+    } else body.pid = me.pid;
+    var em = $("email").value.trim();
+    if (em && !$("emailBox").classList.contains("hidden")) { body.email = em; body.consent = $("consent").checked; }
+    $("btnIn").disabled = $("btnOut").disabled = true;
+    api("/api/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(function (r) {
+      remember(r.pid);
+      me = { pid: r.pid }; isNew = false;
+      $("email").value = ""; $("consent").checked = false; $("newName").value = "";
+      show((status === "in" ? "Thanks, you're down as coming." : "Thanks, you're down as not coming.") +
+        (r.emailed ? " We've emailed you a confirmation." : ""), true);
+      load();
+    }).catch(function (e) { show(e.message, false); })
+      .then(function () { $("btnIn").disabled = $("btnOut").disabled = false; });
+  }
+  function show(msg, ok) { $("result").innerHTML = ""; var d = document.createElement("div"); d.className = "msg " + (ok ? "ok" : "bad"); d.textContent = msg; $("result").appendChild(d); }
+
+  $("btnIn").addEventListener("click", function () { answer("in"); });
+  $("btnOut").addEventListener("click", function () { answer("out"); });
+  $("notMe").addEventListener("click", function () { me = null; isNew = false; forget(); $("result").innerHTML = ""; render(); });
+  $("notListed").addEventListener("click", function () { if (data.past) return; me = null; isNew = true; $("result").innerHTML = ""; render(); $("newName").focus(); });
+  load();
+})();
+</script>
+</body>
+</html>
