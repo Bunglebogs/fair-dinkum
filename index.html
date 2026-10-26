@@ -117,6 +117,13 @@
   .sitbar .names { flex: 1; min-width: 0; }
   .sitbar .names span { white-space: nowrap; display: inline-block; }
   .sitbar .names span:not(:last-child)::after { content: "·"; color: var(--muted); margin: 0 .6em; }
+  .timer { font-size: 4.6vh; font-weight: 800; font-variant-numeric: tabular-nums; background: var(--panel); border: 2px solid var(--line);
+    border-radius: 10px; padding: 0 .5em; cursor: pointer; align-self: center; line-height: 1.3; }
+  .timer.paused { color: var(--muted); }
+  .timer.low { border-color: #e8c27a; background: #fff1d6; }
+  .timer.done { background: var(--danger); color: #fff; border-color: var(--danger); animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+  .sitbar .names span.q { font-variant-numeric: tabular-nums; }
   .toast { position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); background: var(--danger);
     color: #fff; padding: 1.2vh 2vw; border-radius: 10px; font-size: 2.2vh; font-weight: 700;
     box-shadow: 0 6px 24px #0003; }
@@ -255,8 +262,25 @@
   .footer { max-width: 1200px; margin-top: 22px; font-size: 13px; color: var(--muted); }
   .footer a { color: var(--muted); }
 
+  /* ---------- Play style ---------- */
+  .stylerow { display: flex; gap: 10px; align-items: center; }
+  .stylerow select { flex: 1; min-width: 0; font-size: 15px; }
+  .optrow { display: flex; gap: 10px; align-items: center; margin-top: 12px; font-size: 15px; flex-wrap: wrap; }
+  .optrow input[type=number] { width: 72px; padding: 6px 8px; text-align: center; }
+  .optrow select { padding: 6px 8px; }
+  #styleOpts .check { margin-top: 12px; }
+  .sexlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 14px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--panel); max-height: 300px; overflow: auto; }
+  .sexrow { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 15px; }
+  .sexrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sexrow.unset .nm { color: var(--danger); font-weight: 600; }
+  .mini { display: inline-flex; background: var(--bg); border-radius: 7px; padding: 2px; gap: 2px; }
+  .mini button { border: 0; background: transparent; color: var(--muted); padding: 4px 9px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .mini button.on { background: var(--ball); color: #111; }
+  .brand .helpbtn { margin-left: auto; }
+  #setup > .brand { max-width: 1200px; }
+  .rec { color: var(--muted); font-size: 12px; margin-left: 6px; font-weight: 400; }
+
   /* ---------- Seeding ---------- */
-  #seededRow.off, #ladderRow.off { opacity: .5; }
   .seedlist { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; max-height: 340px; overflow: auto; background: var(--panel); }
   .seedlist li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: grab; user-select: none; background: var(--panel); }
   .seedlist li:last-child { border-bottom: 0; }
@@ -317,16 +341,49 @@
   #boardCols td.w { color: var(--ink); }
   #boardCols tr.gone td { color: var(--muted); }
   #boardCols td.pos { color: var(--ok); } #boardCols td.neg { color: var(--danger); }
+  #boardCols tr.click { cursor: pointer; }
+  #boardCols tr.click:hover td { background: var(--panel); }
+  .boardbtns { display: flex; gap: 10px; justify-content: center; }
+  .boardbtns .btn { font-size: 2vh; padding: .8vh 2vw; }
+
+  /* ---------- Player results, summary, help ---------- */
+  .pd table, .sumtable { border-collapse: collapse; width: 100%; font-size: 15px; }
+  .pd th, .pd td, .sumtable th, .sumtable td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  .pd th, .sumtable th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .pd td.won { color: var(--ok); font-weight: 700; } .pd td.lost { color: var(--danger); font-weight: 700; }
+  .pd .body, #sumBody, #helpBody { overflow: auto; padding: 10px 22px; }
+  #sumBody h3 { margin: 18px 0 6px; font-size: 16px; }
+  #sumBody .meta { color: var(--muted); font-size: 14px; }
+  .sumround { margin: 6px 0; font-size: 14px; line-height: 1.5; }
+  .sumround b { color: var(--ink); }
+  #helpBody { font-size: 15px; line-height: 1.5; user-select: text; }
+  #helpBody h3 { margin: 22px 0 6px; font-size: 18px; }
+  #helpBody h4 { margin: 14px 0 2px; font-size: 15px; }
+  #helpBody p { margin: 4px 0 8px; }
+  #helpBody ul { margin: 4px 0 8px; padding-left: 22px; }
+  #helpBody .set { background: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: 14px; margin: 6px 0 8px; }
+  #helpBody .toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+  #helpBody .toc a { font-size: 13px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--text); text-decoration: none; }
+  #helpBody .flash { background: color-mix(in srgb, var(--ball) 45%, white); border-radius: 6px; transition: background 1.5s; }
+  @media print {
+    body.printing > *:not(#sumView) { display: none !important; }
+    body.printing #sumView { position: static; background: none; display: block; }
+    body.printing #sumView .dialog { border: 0; width: auto; max-height: none; }
+    body.printing #sumView footer { display: none; }
+    body.printing { overflow: visible; height: auto; }
+    html, body.printing { height: auto; }
+  }
 </style>
 </head>
 <body>
 
 <!-- ================= SETUP ================= -->
 <div id="setup">
-  <div class="brand"><div class="dot"></div><h1>Fair Dinkum</h1></div>
+  <div class="brand"><div class="dot"></div><h1>Fair Dinkum</h1><button class="btn secondary sm helpbtn" id="helpBtn">Help</button></div>
 
   <div id="resumeBox" class="resume hidden">
     <div class="txt"><b id="resumeTitle">Session in progress</b> — <span id="resumeInfo"></span></div>
+    <button class="btn secondary" id="sumBtn">Summary</button>
     <button class="btn secondary" id="finishBtn">Finish session</button>
     <button class="btn primary" id="resumeBtn">Resume session</button>
   </div>
@@ -363,12 +420,15 @@
           <button data-mode="teams">Teams</button>
         </div>
         <div class="hint" id="modeHint"></div>
+        <label class="lbl" for="styleSel" style="margin-top:16px">Play style</label>
+        <div class="stylerow"><select id="styleSel"></select><button class="linkbtn" id="styleHelp">How it works</button></div>
+        <div class="hint" id="styleHint"></div>
+        <div id="styleOpts"></div>
         <label class="check"><input type="checkbox" id="keepScore"> Keep score</label>
-        <div class="hint">Enter each court's score before moving to the next round. <b class="keysonly">F1</b><span class="keysonly"> or </span><b class="keysonly">L</b><span class="keysonly"> shows</span><span class="touchonly">The Leaderboard button shows</span> the leaderboard.</div>
-        <label class="check" id="seededRow"><input type="checkbox" id="seeded"> Seeded session</label>
-        <div class="hint" id="seededHint">Rank the players before you start. The best play together on the top court, and so on down; after every round they're re-ranked by win rate, then points margin per game. Needs <b>Keep score</b>.</div>
-        <label class="check" id="ladderRow"><input type="checkbox" id="ladder"> Ladder</label>
-        <div class="hint" id="ladderHint">Doubles only, with everyone playing (no sit-outs). Round 1 is random. After that, winners move up a court and losers move down; the two who arrive together split up and play against each other. Top-court winners and bottom-court losers stay put. Without <b>Keep score</b>, tap the winning pair on each court. Adding or removing a player during the session ends the ladder and switches to the normal rotation.</div>
+        <div class="hint"><span id="keepHint"></span> <b class="keysonly">F1</b><span class="keysonly"> or </span><b class="keysonly">L</b><span class="keysonly"> shows</span><span class="touchonly">The Leaderboard button shows</span> the leaderboard.</div>
+        <label class="check" id="balanceRow"><input type="checkbox" id="balance"> Balance courts using past results</label>
+        <div class="hint" id="balanceHint">Uses each player's win rate from earlier sessions (with scores or tapped winners) to make the two sides on each court more even.</div>
+        <div class="optrow"><label for="timerMin">Round timer</label><input type="number" id="timerMin" min="0" max="90" value="0"><span class="muted">minutes (0 = off)</span></div>
         <label class="check"><input type="checkbox" id="touchBtns"> On-screen buttons during the session</label>
         <div class="hint" id="touchHint"></div>
       </div>
@@ -380,7 +440,7 @@
           <button id="courtPlus" title="More courts">+</button>
         </div>
         <div id="courtLabels" style="margin-top:6px"></div>
-        <div class="hint hidden" id="courtRankHint"><span id="courtRankWhat">Seeded session</span>: the first court is the <b>top court</b> (best-ranked game), then the next, and so on. Rename or reorder the labels to match your courts.</div>
+        <div class="hint hidden" id="courtRankHint"><span id="courtRankWhat">Seeded session</span>: the first court is the <b>top court</b> (best-ranked game), then the next, and so on. Rename the labels to match your courts.</div>
       </div>
     </div>
 
@@ -408,9 +468,15 @@
         <div class="subh" id="unpairedTitle">Not yet paired</div>
         <div class="chips" id="unpairedChips"></div>
       </div>
+      <div id="sexArea" class="hidden">
+        <div class="subh">Men and women</div>
+        <div class="hint" style="margin:0 0 8px">Mixed doubles needs to know who's who. It's saved with each player for next time.</div>
+        <div class="sexlist" id="sexList"></div>
+      </div>
       <div id="seedArea" class="hidden">
-        <div class="subh">Seeding (1 = strongest)</div>
-        <div class="hint" style="margin:0 0 8px">Drag to reorder, or use the arrows. This sets round 1; after that, results take over.</div>
+        <div class="subh" id="seedTitle">Seeding (1 = strongest)</div>
+        <div class="hint" style="margin:0 0 8px"><span id="seedHint">Drag to reorder, or use the arrows. This sets round 1; after that, results take over.</span>
+          <button class="linkbtn" id="seedRandom">Random order</button> <button class="linkbtn" id="seedRated">Order by past results</button></div>
         <ol class="seedlist" id="seedList"></ol>
       </div>
       <div class="summary" id="summary"></div>
@@ -418,7 +484,7 @@
       <div class="actions" id="startActions">
         <button class="btn primary" id="startBtn">Start session</button>
         <span class="hint touchonly" style="margin:0">Starts full screen. Use the buttons along the bottom to move between rounds.</span>
-        <span class="hint keysonly" style="margin:0">Starts full screen. <b>Space</b> next round · <b>Backspace</b> previous · <b>E</b> edit players · <b>F1</b>/<b>L</b> leaderboard · <b>Esc</b> leave</span>
+        <span class="hint keysonly" style="margin:0">Starts full screen. <b>Space</b> next round · <b>Backspace</b> previous · <b>E</b> edit players · <b>S</b> shuffle · <b>T</b> timer · <b>F1</b>/<b>L</b> leaderboard · <b>H</b> help · <b>Esc</b> leave</span>
       </div>
     </div>
   </div>
@@ -437,6 +503,7 @@
       <button class="btn secondary sm nokiosk" id="importDb">Import backup…</button>
       <button class="btn secondary sm nokiosk" id="importNames">Import names from Excel…</button>
       <button class="btn secondary sm nokiosk" id="kioskLinkBtn">Kiosk link…</button>
+      <button class="btn secondary sm" id="clearResults">Clear past results…</button>
       <input type="file" id="namesFile" accept=".xlsx,.csv,.txt" class="hidden">
       <input type="file" id="importFile" accept=".json,application/json" class="hidden">
     </div>
@@ -542,19 +609,24 @@
     <div class="roundno">Round <em id="roundNo">1</em></div>
     <div class="runname" id="runName"></div>
     <div class="viewing hidden" id="viewing"></div>
+    <div class="timer hidden" id="timer" title="Click (or press T) to pause or restart"></div>
     <div class="keys keysonly">
       <span><kbd>Space</kbd> next</span>
       <span><kbd>Backspace</kbd> back</span>
       <span><kbd>E</kbd> players</span>
+      <span class="shufonly"><kbd>S</kbd> shuffle</span>
+      <span class="timeronly"><kbd>T</kbd> timer</span>
       <span class="scoreonly"><kbd>F1</kbd>/<kbd>L</kbd> leaderboard</span>
+      <span><kbd>H</kbd> help</span>
       <span><kbd>Esc</kbd> leave</span>
     </div>
   </div>
   <div id="courts"></div>
-  <div class="sitbar" id="sitbar"><div class="t">Sitting out</div><div class="names" id="sitNames"></div></div>
+  <div class="sitbar" id="sitbar"><div class="t" id="sitTitle">Sitting out</div><div class="names" id="sitNames"></div></div>
   <div class="touchbar touchonly">
     <button class="tb" id="tbPrev">‹ Back</button>
     <button class="tb small" id="tbPlayers">Players</button>
+    <button class="tb small shufonly" id="tbShuffle">Shuffle</button>
     <button class="tb small scoreonly" id="tbBoard">Leaderboard</button>
     <button class="tb small" id="tbEnd">End</button>
     <button class="tb next" id="tbNext">Next round ›</button>
@@ -571,7 +643,41 @@
     <div class="sub" style="margin-left:auto"><span id="boardRule">Ranked by wins, then points margin</span><span class="keysonly"> · <b>F1</b>, <b>L</b> or <b>Esc</b> to close</span></div>
   </div>
   <div id="boardCols"></div>
+  <div class="boardbtns"><span class="muted keysonly" style="align-self:center">Click a name to see their games.</span><span class="muted touchonly" style="align-self:center">Tap a name to see their games.</span>
+    <button class="btn secondary" id="boardSummary">Session summary</button></div>
   <div class="touchonly" style="text-align:center"><button class="tb next" id="tbBoardClose" style="min-width:40vw">Close</button></div>
+</div>
+
+<!-- ================= ONE PLAYER'S GAMES ================= -->
+<div id="pdView" class="overlay hidden">
+  <div class="dialog pd" style="width:min(820px,94vw)">
+    <header id="pdTitle"></header>
+    <div class="sub" id="pdSub"></div>
+    <div class="body" id="pdBody"></div>
+    <footer><button class="btn primary" id="pdClose">Close</button></footer>
+  </div>
+</div>
+
+<!-- ================= SESSION SUMMARY ================= -->
+<div id="sumView" class="overlay hidden">
+  <div class="dialog" style="width:min(900px,94vw)">
+    <header>Session summary</header>
+    <div id="sumBody"></div>
+    <footer>
+      <button class="btn secondary" id="sumClose">Close</button>
+      <button class="btn secondary" id="sumSave">Save as file</button>
+      <button class="btn primary" id="sumPrint">Print</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= HELP ================= -->
+<div id="helpView" class="overlay hidden">
+  <div class="dialog" style="width:min(900px,94vw)">
+    <header>Fair Dinkum: quick reference</header>
+    <div id="helpBody"></div>
+    <footer><button class="btn primary" id="helpClose">Close</button></footer>
+  </div>
 </div>
 
 <!-- ================= EDIT PLAYERS (mid-session) ================= -->
@@ -583,6 +689,7 @@
     <div class="add">
       <input type="text" id="addName" placeholder="Add a player" list="dbNames">
       <datalist id="dbNames"></datalist>
+      <select id="addSex" class="hidden" title="Man or woman"><option value="">Man or woman?</option><option value="m">Man</option><option value="f">Woman</option></select>
       <button class="btn secondary" id="addBtn" style="padding:9px 18px">Add</button>
     </div>
     <footer>
@@ -611,7 +718,8 @@
     opponentRecent: 12,  // opposed in the previous round
     court: 2,            // per previous visit to this court
     courtRecent: 3,      // same court as previous round
-    seed: 200            // seeded sessions: per player moved one court away from their ranking band
+    seed: 200,           // seeded sessions: per player moved one court away from their ranking band
+    balance: 300         // "balance by past results": per (difference in the two sides' ratings)^2
   };
 
   function unitsPerCourt(mode) { return mode === "doubles" ? 4 : 2; }
@@ -721,11 +829,11 @@
       c += pairCost(s.opponent, s.opponentLast, a0, b1, W.opponent, W.opponentRecent, r);
       c += pairCost(s.opponent, s.opponentLast, a1, b0, W.opponent, W.opponentRecent, r);
       c += pairCost(s.opponent, s.opponentLast, a1, b1, W.opponent, W.opponentRecent, r);
-      return c + courtCost(s, [a0, a1, b0, b1], m);
+      return c + courtCost(s, [a0, a1, b0, b1], m) + balanceCost(s, [a0, a1], [b0, b1]);
     }
     var x = slots[b], y = slots[b + 1];
     return pairCost(s.opponent, s.opponentLast, x, y, W.opponent, W.opponentRecent, r) +
-           courtCost(s, [x, y], m);
+           courtCost(s, [x, y], m) + balanceCost(s, [x], [y]);
   }
 
   // Randomised restarts + pairwise-swap hill climbing.
@@ -926,7 +1034,673 @@
     return round;
   }
 
+  // =====================================================================
+  // Play styles. A session's style (s.style) decides how each round is made;
+  // s.opt holds the style's adjustable rules. E.next(s) makes the next round.
+  //   modes: d = doubles, s = singles, t = teams
+  //   results: every game needs a winner (score, or a tap) before the next round
+  // =====================================================================
+  var STYLES = {
+    rotation:  { modes: "dst", results: false },
+    seeded:    { modes: "dst", results: true, seedList: true },
+    mixed:     { modes: "d", results: false, sexes: true },
+    combo:     { modes: "d", results: false, sexes: true },
+    ladder:    { modes: "d", results: true, exact: true },
+    throne:    { modes: "d", results: true, exact: true, seedList: true, points: true },
+    scramble:  { modes: "d", results: false, blocks: true },
+    river:     { modes: "d", results: true, blocks: true, seedList: true, points: true },
+    cream:     { modes: "d", results: true, blocks: true, seedList: true, points: true },
+    challenge: { modes: "dst", results: true, queue: true },
+    compass:   { modes: "st", results: true, bracket: true, seedList: true },
+    double:    { modes: "st", results: true, bracket: true, seedList: true }
+  };
+  function styleName(s) { return STYLES[s.style] ? s.style : "rotation"; }
+  function styleInfo(name) { return STYLES[name] || STYLES.rotation; }
+  function opt(s, k, d) { return s.opt && s.opt[k] !== undefined && s.opt[k] !== null && s.opt[k] !== "" ? s.opt[k] : d; }
+
+  // "a", "b" or null: from the score when keeping score, otherwise the tapped winner.
+  function winnerOf(s, m) {
+    if (m.walkover) return m.walkover;
+    if (s.scoring) {
+      var sc = m.score;
+      if (!sc || sc.a === null || sc.b === null || sc.a === undefined || sc.b === undefined || sc.a === sc.b) return null;
+      return sc.a > sc.b ? "a" : "b";
+    }
+    return m.winner || null;
+  }
+
+  // ---- undo for "shuffle this round" ----
+  var SNAP_KEYS = ["units", "order", "partner", "partnerLast", "opponent", "opponentLast", "nextId", "st"];
+  function snapshot(s) { var o = {}; SNAP_KEYS.forEach(function (k) { if (s[k] !== undefined) o[k] = s[k]; }); return JSON.stringify(o); }
+  function restoreSnap(s, txt) {
+    var nowUnits = s.units, nowOrder = s.order.slice();
+    var o = JSON.parse(txt);
+    SNAP_KEYS.forEach(function (k) { if (k in o) s[k] = o[k]; else delete s[k]; });
+    // keep players added, removed or edited since the round was made
+    nowOrder.forEach(function (id) {
+      if (!s.units[id]) { s.units[id] = nowUnits[id]; s.order.push(id); }
+      else { s.units[id].active = nowUnits[id].active; s.units[id].sex = nowUnits[id].sex; s.units[id].rating = nowUnits[id].rating; }
+    });
+    s.nextId = Math.max(s.nextId, (nowOrder.length ? Math.max.apply(null, nowOrder.map(function (id) { return +id.slice(1); })) : 0) + 1);
+  }
+
+  function next(s) {
+    var snap = snapshot(s);
+    var rd = generate(s);
+    if (rd) { s.lastSnap = snap; rd.style = styleName(s); }
+    return rd;
+  }
+  function canShuffle(s) {
+    var st = styleName(s), n = s.rounds.length, last = s.rounds[n - 1];
+    if (!n || !s.lastSnap) return false;
+    if (st === "rotation" || st === "seeded" || st === "mixed" || st === "combo") return true;
+    if (st === "scramble") return !!(last.block && last.block.game === 0);
+    if (st === "ladder" || st === "challenge") return n === 1;
+    return false;
+  }
+  function reshuffle(s) {
+    if (!canShuffle(s)) return null;
+    var snap = s.lastSnap;
+    s.rounds.pop();
+    restoreSnap(s, snap);
+    return next(s);
+  }
+  // Call after players are added or removed mid-session.
+  function playersChanged(s) { if (s.st) s.st.blockBreak = true; }
+
+  function generate(s) {
+    var st = styleName(s);
+    if (st === "rotation") { s.seeded = false; return nextRound(s); }
+    if (st === "seeded") { s.seeded = true; return nextRound(s, { ranking: rankingIds(s) }); }
+    if (st === "mixed" || st === "combo") return typedRound(s);
+    if (st === "ladder" || st === "throne") {
+      var last = s.rounds[s.rounds.length - 1];
+      if (!last || !last.ladder) return ladderStart(s);
+      var w = latestWinners(s);
+      if (w.indexOf(null) >= 0) return null;
+      return ladderRound(s, w);
+    }
+    if (STYLES[st].blocks) return blockRound(s);
+    if (st === "challenge") return challengeRound(s);
+    if (STYLES[st].bracket) return bracketRound(s);
+    return nextRound(s);
+  }
+  function latestWinners(s) {
+    var last = s.rounds[s.rounds.length - 1];
+    return last.matches.slice().sort(function (x, y) { return x.court - y.court; }).map(function (m) { return winnerOf(s, m); });
+  }
+  function finishRound(s, rd) { record(s, rd); s.rounds.push(rd); return rd; }
+
+  // ---- balancing by past results ----
+  function ratingOf(s, id) { var r = s.units[id] && s.units[id].rating; return typeof r === "number" ? r : 0.5; }
+  function balanceCost(s, A, B) {
+    if (!s.balance) return 0;
+    var a = 0, b = 0;
+    A.forEach(function (id) { a += ratingOf(s, id); }); B.forEach(function (id) { b += ratingOf(s, id); });
+    return W.balance * (a - b) * (a - b);
+  }
+
+  // ---- standings ----
+  // Rows: p played, w won, l lost, pf/pa points for/against, m margin, pts court-weighted points.
+  function standings(s) {
+    var st = styleName(s), info = STYLES[st], t = {};
+    s.order.forEach(function (id, i) {
+      t[id] = { id: id, seed: i, name: s.units[id].name, active: s.units[id].active, p: 0, w: 0, l: 0, pf: 0, pa: 0, pts: 0 };
+    });
+    s.rounds.forEach(function (rd) {
+      var n = rd.matches.length;
+      rd.matches.forEach(function (m) {
+        if (m.walkover) return;
+        var w = winnerOf(s, m); if (!w) return;
+        var sc = s.scoring ? m.score : null;
+        var worth = Math.max(1, n - m.court);
+        [["a", m.sideA], ["b", m.sideB]].forEach(function (x) {
+          x[1].forEach(function (id) {
+            var r = t[id]; if (!r) return;
+            r.p++;
+            if (sc) { r.pf += x[0] === "a" ? sc.a : sc.b; r.pa += x[0] === "a" ? sc.b : sc.a; }
+            if (w === x[0]) { r.w++; r.pts += worth; } else r.l++;
+          });
+        });
+      });
+    });
+    var rows = Object.keys(t).map(function (k) { var r = t[k]; r.m = r.pf - r.pa; r.rate = r.p ? r.w / r.p : 0.5; r.mpg = r.p ? r.m / r.p : 0; return r; })
+      .filter(function (r) { return r.active || r.p > 0; });
+    var same;
+    if (info.bracket) {
+      var pl = bracketPlaces(s);
+      rows.forEach(function (r) { r.place = pl[r.id]; });
+      rows.sort(function (a, b) {
+        var pa = a.place || 1e6, pb = b.place || 1e6;
+        return pa - pb || b.w - a.w || a.l - b.l || a.seed - b.seed;
+      });
+      same = function (a, b) { return a.place && a.place === b.place; };
+    } else if (info.points) {
+      rows.sort(function (a, b) { return b.pts - a.pts || b.rate - a.rate || b.mpg - a.mpg || a.seed - b.seed; });
+      same = function (a, b) { return a.p && b.p && a.pts === b.pts && a.rate === b.rate && a.mpg === b.mpg; };
+    } else if (st === "seeded") {
+      rows.sort(function (a, b) { return b.rate - a.rate || b.mpg - a.mpg || a.seed - b.seed; });
+      same = function (a, b) { return a.p && b.p && a.rate === b.rate && a.mpg === b.mpg; };
+    } else {
+      rows.sort(function (a, b) { return b.w - a.w || b.m - a.m || a.name.localeCompare(b.name); });
+      same = function (a, b) { return a.w === b.w && a.m === b.m; };
+    }
+    rows.forEach(function (r, i) { var prev = rows[i - 1]; r.rank = prev && same(prev, r) ? prev.rank : i + 1; });
+    return rows;
+  }
+  function rankingIds(s) { return standings(s).filter(function (r) { return r.active; }).map(function (r) { return r.id; }); }
+
+  // ---- Mixed doubles and Combo ----
+  // Each court is mixed (man & woman v man & woman) or same-sex. Mixed uses as many
+  // mixed courts as it can; Combo alternates: mixed-first one round, same-sex-first the next.
+  function courtPlan(s, nm, nf, C, r) {
+    var best = null, wantMixed = s.style !== "combo" || r % 2 === 0;
+    for (var x = 0; x <= C; x++) for (var y = 0; x + y <= C; y++) for (var z = 0; x + y + z <= C; z++) {
+      if (2 * x + 4 * y > nm || 2 * x + 4 * z > nf) continue;
+      var score = 4 * (x + y + z) * 1000 + (wantMixed ? x : -x);
+      if (!best || score > best.score) best = { x: x, y: y, z: z, score: score };
+    }
+    return best;
+  }
+  function typedRound(s) {
+    var r = s.rounds.length, ids = activeIds(s);
+    var sexOf = function (id) { return s.units[id].sex; };
+    var men = ids.filter(function (id) { return sexOf(id) === "m"; }), women = ids.filter(function (id) { return sexOf(id) === "f"; });
+    var plan = courtPlan(s, men.length, women.length, s.courts.length, r);
+    if (!plan || plan.x + plan.y + plan.z === 0) return null;
+    var nmPlay = 2 * plan.x + 4 * plan.y, nfPlay = 2 * plan.x + 4 * plan.z;
+    var sitSet = {};
+    chooseSitters(s, men, men.length - nmPlay, r).concat(chooseSitters(s, women, women.length - nfPlay, r))
+      .forEach(function (id) { sitSet[id] = true; });
+    ids.forEach(function (id) { if (sexOf(id) !== "m" && sexOf(id) !== "f") sitSet[id] = true; });
+    var pm = men.filter(function (id) { return !sitSet[id]; }), pw = women.filter(function (id) { return !sitSet[id]; });
+    var sexes = [], k;
+    for (k = 0; k < plan.x; k++) sexes.push("m", "f", "m", "f");
+    for (k = 0; k < plan.y; k++) sexes.push("m", "m", "m", "m");
+    for (k = 0; k < plan.z; k++) sexes.push("f", "f", "f", "f");
+    var courtsUsed = plan.x + plan.y + plan.z;
+    var slots = typedArrange(s, sexes, pm, pw, courtsUsed, r);
+    var matches = [];
+    for (var m = 0; m < courtsUsed; m++) {
+      var b = m * 4;
+      matches.push({ court: m, sideA: [slots[b], slots[b + 1]], sideB: [slots[b + 2], slots[b + 3]],
+        kind: sexes[b] !== sexes[b + 1] ? "mixed" : sexes[b] === "m" ? "men" : "women" });
+    }
+    return finishRound(s, { index: r, matches: matches, sitting: ids.filter(function (id) { return sitSet[id]; }) });
+  }
+  function typedArrange(s, sexes, pm, pw, courtsUsed, r) {
+    var best = null, bestCost = Infinity;
+    for (var t = 0; t < 20; t++) {
+      var mm = shuffle(pm.slice(), s.rng), ww = shuffle(pw.slice(), s.rng);
+      var slots = sexes.map(function (x) { return x === "m" ? mm.pop() : ww.pop(); });
+      var mc = [], total = 0, m;
+      for (m = 0; m < courtsUsed; m++) { mc[m] = matchCost(s, slots, m, 4, r); total += mc[m]; }
+      var improved = true;
+      while (improved) {
+        improved = false;
+        for (var i = 0; i < slots.length; i++) {
+          for (var j = i + 1; j < slots.length; j++) {
+            if (sexes[i] !== sexes[j]) continue;
+            var mi = Math.floor(i / 4), mj = Math.floor(j / 4);
+            var tmp = slots[i]; slots[i] = slots[j]; slots[j] = tmp;
+            var ni = matchCost(s, slots, mi, 4, r), nj = mi === mj ? ni : matchCost(s, slots, mj, 4, r);
+            var before = mi === mj ? mc[mi] : mc[mi] + mc[mj], after = mi === mj ? ni : ni + nj;
+            if (after < before - 1e-9) { mc[mi] = ni; mc[mj] = nj; total += after - before; improved = true; }
+            else { tmp = slots[i]; slots[i] = slots[j]; slots[j] = tmp; }
+          }
+        }
+      }
+      if (total < bestCost) { bestCost = total; best = slots.slice(); }
+      if (bestCost === 0) break;
+    }
+    return best;
+  }
+
+  // ---- Ladder and Claim the Throne: the first round ----
+  // Ladder starts random; Claim the Throne starts from the seeding (best four on the
+  // top court, as best & 4th v 2nd & 3rd).
+  function ladderStart(s) {
+    var r = s.rounds.length, ids = activeIds(s), cap = capacity(s, ids.length), rd;
+    if (cap.courtsUsed === 0) return null;
+    if (s.style === "throne") {
+      var playing = ids.slice(0, cap.playing), matches = [];
+      for (var m = 0; m < cap.courtsUsed; m++) {
+        var g = playing.slice(m * 4, m * 4 + 4);
+        matches.push({ court: m, sideA: [g[0], g[3]], sideB: [g[1], g[2]] });
+      }
+      rd = finishRound(s, { index: r, matches: matches, sitting: ids.slice(cap.playing) });
+    } else rd = nextRound(s);
+    rd.ladder = true;
+    return rd;
+  }
+
+  // ---- Scramble, Up & Down the River, Cream of the Crop ----
+  // Players are put in groups of 4 (or 5) per court for a block of games, playing every
+  // partnership on that court in turn. Between blocks: Scramble mixes everyone up;
+  // River moves the top player(s) of each court up a court and the bottom one(s) down;
+  // Cream starts with balanced groups, sorts everyone by results after block 1, then
+  // moves the top two up and the bottom two down.
+  var FOUR = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
+  var FIVE = [[0, [[1, 2], [3, 4]]], [1, [[0, 3], [2, 4]]], [2, [[0, 4], [1, 3]]], [3, [[0, 2], [1, 4]]], [4, [[0, 1], [2, 3]]]];
+  function blockRound(s) {
+    var st = s.st || (s.st = {}), b = st.blk;
+    var broken = b && b.groups.some(function (g) { return g.some(function (id) { return !s.units[id].active; }); });
+    if (!b || b.game + 1 >= b.games || st.blockBreak || broken) {
+      b = newBlock(s, b);
+      st.blockBreak = false;
+      if (!b) return null;
+      st.blk = b;
+    } else b.game++;
+    var r = s.rounds.length, matches = [], sitting = [], inGroup = {};
+    b.groups.forEach(function (g, gi) {
+      g.forEach(function (id) { inGroup[id] = true; });
+      var sides;
+      if (g.length === 5) { var e = FIVE[(b.game + gi) % 5]; sitting.push(g[e[0]]); sides = e[1]; }
+      else sides = FOUR[b.game % 3];
+      matches.push({ court: gi, sideA: [g[sides[0][0]], g[sides[0][1]]], sideB: [g[sides[1][0]], g[sides[1][1]]] });
+    });
+    var ids = activeIds(s);
+    ids.forEach(function (id) { if (!inGroup[id]) sitting.push(id); });
+    var pos = {}; ids.forEach(function (id, i) { pos[id] = i; });
+    sitting.sort(function (x, y) { return pos[x] - pos[y]; });
+    return finishRound(s, { index: r, matches: matches, sitting: sitting, block: { n: b.n, game: b.game, games: b.games } });
+  }
+  function newBlock(s, prev) {
+    var st = s.st, style = s.style, ids = activeIds(s), C = s.courts.length;
+    var G = Math.max(1, Math.min(10, parseInt(opt(s, "games", 3), 10) || 3));
+    var fives = opt(s, "fives", true) !== false;
+    var n = ids.length, groups = Math.min(C, Math.floor(n / 4));
+    if (groups === 0) return null;
+    var extra = n - groups * 4, n5 = fives ? Math.min(extra, groups) : 0, nSit = extra - n5;
+    var sizes = [], i, bn = prev ? prev.n + 1 : 0;
+    for (i = 0; i < groups; i++) sizes.push(4);
+    var r = s.rounds.length, sitSet = {};
+    chooseSitters(s, ids, nSit, r).forEach(function (id) { sitSet[id] = true; });
+    var playing = ids.filter(function (id) { return !sitSet[id]; });
+    var flat;
+    if (style === "scramble") {
+      // courts of 5 go last; the people most owed a rest (one sits out each game there) fill them
+      for (i = 0; i < n5; i++) sizes[groups - 1 - i] = 5;
+      var five = chooseSitters(s, playing, n5 * 5, r), isFive = {};
+      five.forEach(function (id) { isFive[id] = true; });
+      var rest = playing.filter(function (id) { return !isFive[id]; });
+      flat = mixGroups(s, rest, sizes.slice(0, groups - n5), r).concat(n5 ? mixGroups(s, five, sizes.slice(groups - n5), r) : []);
+    } else {
+      // the courts that take 5 move round from block to block
+      for (i = 0; i < n5; i++) sizes[((groups - 1 - i - bn) % groups + groups) % groups] = 5;
+      var lo = ladderOrder(s, prev);
+      st.order = lo;
+      var pl = lo.filter(function (id) { return !sitSet[id]; });
+      flat = style === "cream" && bn === 0 ? snake(pl, sizes) : pl;
+    }
+    var out = [], at = 0;
+    sizes.forEach(function (sz) { out.push(flat.slice(at, at + sz)); at += sz; });
+    return { n: bn, games: G, game: 0, groups: out };
+  }
+  // Wins (and points margin, when scored) per player in one block.
+  function blockResults(s, n) {
+    var res = {};
+    s.rounds.forEach(function (rd) {
+      if (!rd.block || rd.block.n !== n) return;
+      rd.matches.forEach(function (m) {
+        var w = winnerOf(s, m); if (!w) return;
+        var sc = s.scoring && m.score ? m.score : null;
+        [["a", m.sideA], ["b", m.sideB]].forEach(function (x) {
+          x[1].forEach(function (id) {
+            var q = res[id] || (res[id] = { w: 0, pd: 0, p: 0 });
+            q.p++;
+            if (w === x[0]) q.w++;
+            if (sc) q.pd += x[0] === "a" ? sc.a - sc.b : sc.b - sc.a;
+          });
+        });
+      });
+    });
+    return res;
+  }
+  // Order of every active player, best first, after applying the last block's moves.
+  function ladderOrder(s, prev) {
+    var st = s.st, ids = activeIds(s), act = {};
+    ids.forEach(function (id) { act[id] = true; });
+    var order = (st.order || s.order).filter(function (id) { return act[id]; });
+    ids.forEach(function (id) { if (order.indexOf(id) < 0) order.push(id); });
+    if (!prev) return order;
+    var res = blockResults(s, prev.n), pos = {};
+    order.forEach(function (id, i) { pos[id] = i; });
+    var score = function (id) { return res[id] || { w: 0, pd: 0, p: 0 }; };
+    var cmp = function (a, b) { return score(b).w - score(a).w || score(b).pd - score(a).pd || pos[a] - pos[b]; };
+    var played = [];
+    prev.groups.forEach(function (g) { g.forEach(function (id) { if (act[id]) played.push(id); }); });
+    var moved;
+    if (s.style === "cream" && prev.n === 0) moved = played.slice().sort(cmp);
+    else {
+      var move = s.style === "cream" ? 2 : Math.max(1, parseInt(opt(s, "move", 1), 10) || 1);
+      var keyed = [], L = prev.groups.length;
+      prev.groups.forEach(function (g0, gi) {
+        var g = g0.filter(function (id) { return act[id]; }).sort(cmp);
+        var k = Math.min(move, Math.floor(g.length / 2));
+        g.forEach(function (id, ri) {
+          var t = gi, from = 1;                          // from: 0 came down, 1 stayed, 2 came up
+          if (ri < k && gi > 0) { t = gi - 1; from = 2; }
+          else if (ri >= g.length - k && gi < L - 1) { t = gi + 1; from = 0; }
+          keyed.push({ id: id, k: t * 1000 + from * 100 + ri });
+        });
+      });
+      moved = keyed.sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.id; });
+    }
+    // players who sat out the block keep their place in the order
+    var isPlayed = {}; played.forEach(function (id) { isPlayed[id] = true; });
+    var j = 0;
+    return order.map(function (id) { return isPlayed[id] ? moved[j++] : id; });
+  }
+  // Spread a best-first list over groups so each group gets a mix of strengths.
+  function snake(list, sizes) {
+    var G = sizes.length, groups = sizes.map(function () { return []; }), g = 0, dir = 1;
+    list.forEach(function (id) {
+      var guard = 0;
+      while (groups[g].length >= sizes[g] && guard++ < 2 * G) { g += dir; if (g >= G) { g = G - 1; dir = -1; } else if (g < 0) { g = 0; dir = 1; } }
+      groups[g].push(id);
+      g += dir; if (g >= G) { g = G - 1; dir = -1; } else if (g < 0) { g = 0; dir = 1; }
+    });
+    var flat = []; groups.forEach(function (x) { flat = flat.concat(x); });
+    return flat;
+  }
+  // Scramble groups: keep apart people who have already played together or against each other.
+  function togetherCost(s, ids, r) {
+    var c = 0;
+    for (var i = 0; i < ids.length; i++) for (var j = i + 1; j < ids.length; j++) {
+      var k = key(ids[i], ids[j]), n = (s.partner[k] || 0) + (s.opponent[k] || 0);
+      c += n * n + ((s.partnerLast[k] === r - 1 || s.opponentLast[k] === r - 1) ? 2 : 0);
+    }
+    return c;
+  }
+  function mixGroups(s, playing, sizes, r) {
+    var best = null, bestCost = Infinity;
+    for (var t = 0; t < 15; t++) {
+      var list = shuffle(playing.slice(), s.rng), groups = [], at = 0;
+      sizes.forEach(function (sz) { groups.push(list.slice(at, at + sz)); at += sz; });
+      var gc = groups.map(function (g) { return togetherCost(s, g, r); });
+      var improved = true, guard = 0;
+      while (improved && guard++ < 40) {
+        improved = false;
+        for (var a = 0; a < groups.length; a++) for (var b = a + 1; b < groups.length; b++) {
+          for (var i = 0; i < groups[a].length; i++) for (var j = 0; j < groups[b].length; j++) {
+            var ga = groups[a].slice(), gb = groups[b].slice(), x = ga[i]; ga[i] = gb[j]; gb[j] = x;
+            var ca = togetherCost(s, ga, r), cb = togetherCost(s, gb, r);
+            if (ca + cb < gc[a] + gc[b] - 1e-9) { groups[a] = ga; groups[b] = gb; gc[a] = ca; gc[b] = cb; improved = true; }
+          }
+        }
+      }
+      var total = gc.reduce(function (p, q) { return p + q; }, 0);
+      if (total < bestCost) { bestCost = total; best = groups; }
+      if (bestCost === 0) break;
+    }
+    var flat = []; best.forEach(function (g) { flat = flat.concat(g); });
+    return flat;
+  }
+
+  // ---- Challenge court ----
+  // Winners stay on (up to a limit of wins in a row); losers go to the back of the queue,
+  // and the next in the queue come on to challenge. At the limit the winners go off too,
+  // after the losers. Round 1 is a random draw; everyone else starts in the queue.
+  function sameSet(a, b) { return a.length === b.length && a.every(function (x) { return b.indexOf(x) >= 0; }); }
+  function challengeRound(s) {
+    var st = s.st || (s.st = {}), r = s.rounds.length, per = unitsPerCourt(s.mode), half = per / 2;
+    var ids = activeIds(s), act = {};
+    ids.forEach(function (id) { act[id] = true; });
+    var cap = parseInt(opt(s, "cap", 3), 10); if (!(cap >= 0)) cap = 3;
+    var C = Math.min(s.courts.length, Math.floor(ids.length / per));
+    if (C === 0) return null;
+    var stay = [], queue;
+    if (!st.queue) queue = shuffle(ids.slice(), s.rng);
+    else {
+      var last = s.rounds[r - 1], off = [], winnersOff = [], onCourt = {};
+      last.matches.forEach(function (m) {
+        m.sideA.concat(m.sideB).forEach(function (id) { onCourt[id] = true; });
+        var w = winnerOf(s, m); if (!w) w = "a";
+        var win = w === "a" ? m.sideA : m.sideB, lose = w === "a" ? m.sideB : m.sideA;
+        var prev = st.stay && st.stay[m.court];
+        var wins = prev && sameSet(prev.ids, win) ? prev.wins + 1 : 1;
+        lose.forEach(function (id) { off.push(id); });
+        var ok = win.every(function (id) { return act[id]; });
+        if ((cap > 0 && wins >= cap) || !ok || m.court >= C) win.forEach(function (id) { winnersOff.push(id); });
+        else stay[m.court] = { ids: win.slice(), wins: wins };
+      });
+      queue = st.queue.filter(function (id) { return act[id] && !onCourt[id]; }).concat(off, winnersOff)
+        .filter(function (id) { return act[id]; });
+      ids.forEach(function (id) { if (queue.indexOf(id) < 0 && !stay.some(function (x) { return x && x.ids.indexOf(id) >= 0; })) queue.push(id); });
+    }
+    var matches = [], newStay = [];
+    for (var c = 0; c < C; c++) {
+      if (stay[c]) {
+        matches.push({ court: c, sideA: stay[c].ids, sideB: queue.splice(0, half), streak: stay[c].wins });
+        newStay[c] = stay[c];
+      } else {
+        matches.push({ court: c, sideA: queue.splice(0, half), sideB: queue.splice(0, half), streak: 0 });
+        newStay[c] = null;
+      }
+    }
+    st.queue = queue; st.stay = newStay;
+    return finishRound(s, { index: r, matches: matches, sitting: queue.slice(), queue: true });
+  }
+
+  // ---- Knockout brackets: Compass and Double elimination ----
+  // Any number of entrants: the draw is filled up to a power of two with byes, which go to
+  // the top seeds. A game against a bye is won automatically.
+  // Compass: every round's losers start a new draw, so everyone plays every round and
+  // every finishing place is decided (East is the main draw; West, North, South... the others).
+  // Double elimination: a winners' bracket and a losers' bracket; two defeats and you're out.
+  // The losers' bracket winner meets the winners' bracket winner in the grand final, with an
+  // optional decider if the losers' bracket winner wins the first final.
+  function seedSlots(P) {
+    var a = [1];
+    while (a.length < P) { var m = a.length * 2 + 1, b = []; a.forEach(function (x) { b.push(x, m - x); }); a = b; }
+    return a;
+  }
+  function roundName(size) {
+    return size === 2 ? "final" : size === 4 ? "semi-final" : size === 8 ? "quarter-final" : "round of " + size;
+  }
+  var COMPASS_NEXT = { East: ["West", "North", "Northeast"], West: ["South", "Southwest"], North: ["Northwest"], South: ["Southeast"] };
+  function buildBracket(s) {
+    var ids = activeIds(s), n = ids.length, P = 2;
+    while (P < n) P *= 2;
+    var br = { kind: s.style, nodes: [], P: P };
+    var node = function (label, stage) { var x = { id: br.nodes.length, label: label, stage: stage, srcA: null, srcB: null }; br.nodes.push(x); return x; };
+    var entrants = seedSlots(P).map(function (sd) { return { unit: sd <= n ? ids[sd - 1] : "BYE" }; });
+    if (s.style === "compass") {
+      var draw = function (feeds, name, lo, stage0) {
+        var level = 0, cur = feeds;
+        while (cur.length >= 2) {
+          var size = cur.length, nextF = [], loseF = [];
+          for (var i = 0; i < size; i += 2) {
+            var x = node(name + " " + roundName(size), stage0 + level);
+            x.srcA = cur[i]; x.srcB = cur[i + 1];
+            nextF.push({ from: x.id, kind: "w" }); loseF.push({ from: x.id, kind: "l" });
+            if (size === 2) x.place = { w: lo, l: lo + 1 };
+          }
+          if (size > 2) {
+            var kids = COMPASS_NEXT[name], child = kids && kids[level] ? kids[level] : name + " consolation " + (level + 1);
+            draw(loseF, child, lo + size / 2, stage0 + level + 1);
+          }
+          cur = nextF; level++;
+        }
+      };
+      draw(entrants, "East", 1, 0);
+    } else {
+      var R = Math.round(Math.log(P) / Math.LN2), wb = [entrants], k, i, x;
+      var wbNodes = [];
+      for (k = 1; k <= R; k++) {
+        var feeds = wb[k - 1], nodes = [], nf = [];
+        for (i = 0; i < feeds.length; i += 2) {
+          var size = feeds.length;
+          x = node("Winners " + roundName(size), 2 * k - 2);
+          x.srcA = feeds[i]; x.srcB = feeds[i + 1]; x.bracket = "W";
+          nodes.push(x); nf.push({ from: x.id, kind: "w" });
+        }
+        wbNodes.push(nodes); wb.push(nf);
+      }
+      var losersOf = function (nodes) { return nodes.map(function (y) { return { from: y.id, kind: "l" }; }); };
+      var lbChamp, lr = 0;
+      if (P === 2) lbChamp = { from: wbNodes[0][0].id, kind: "l" };
+      else {
+        var surv = [], drop = losersOf(wbNodes[0]);
+        lr++;
+        for (i = 0; i < drop.length; i += 2) {
+          x = node("Losers round " + lr, 1); x.srcA = drop[i]; x.srcB = drop[i + 1]; x.bracket = "L"; x.lround = lr;
+          surv.push({ from: x.id, kind: "w" });
+        }
+        for (k = 2; k <= R; k++) {
+          drop = losersOf(wbNodes[k - 1]);
+          if (k % 2 === 0) drop.reverse();
+          lr++;
+          var ns = [];
+          for (i = 0; i < surv.length; i++) {
+            x = node(surv.length === 1 && k === R ? "Losers final" : "Losers round " + lr, 2 * k - 1);
+            x.srcA = surv[i]; x.srcB = drop[i]; x.bracket = "L"; x.lround = lr;
+            ns.push({ from: x.id, kind: "w" });
+          }
+          surv = ns;
+          if (k < R) {
+            lr++;
+            ns = [];
+            for (i = 0; i < surv.length; i += 2) {
+              x = node("Losers round " + lr, 2 * k); x.srcA = surv[i]; x.srcB = surv[i + 1]; x.bracket = "L"; x.lround = lr;
+              ns.push({ from: x.id, kind: "w" });
+            }
+            surv = ns;
+          }
+        }
+        lbChamp = surv[0];
+      }
+      var gf = node("Grand final", 100); gf.srcA = { from: wbNodes[R - 1][0].id, kind: "w" }; gf.srcB = lbChamp; gf.bracket = "G";
+      if (opt(s, "reset", true) !== false) {
+        var gf2 = node("Grand final decider", 101); gf2.bracket = "G2"; gf2.ifB = gf.id;
+      }
+    }
+    return br;
+  }
+  function feedValue(br, f) {
+    if (!f) return undefined;
+    if (f.unit) return f.unit;
+    var src = br.nodes[f.from];
+    if (!src.done) return undefined;
+    return f.kind === "w" ? src.winner : src.loser;
+  }
+  function settleNode(x, w) {
+    x.w = w; x.done = true;
+    x.winner = w === "a" ? x.a : x.b; x.loser = w === "a" ? x.b : x.a;
+  }
+  // Fill in every game whose players are known; games against a bye (or a player who
+  // has left) are decided straight away.
+  function resolveBracket(s, br) {
+    var changed = true;
+    while (changed) {
+      changed = false;
+      br.nodes.forEach(function (x) {
+        if (x.done || x.skip) return;
+        if (x.ifB !== undefined) {
+          var g = br.nodes[x.ifB];
+          if (!g.done) return;
+          if (g.w !== "b") { x.skip = true; x.done = true; changed = true; return; }
+          if (x.a === undefined) { x.a = g.a; x.b = g.b; changed = true; }
+        } else {
+          var a = feedValue(br, x.srcA), b = feedValue(br, x.srcB);
+          if (a === undefined || b === undefined) return;
+          if (x.a !== a || x.b !== b) { x.a = a; x.b = b; changed = true; }
+        }
+        var outA = x.a === "BYE" || !s.units[x.a] || !s.units[x.a].active;
+        var outB = x.b === "BYE" || !s.units[x.b] || !s.units[x.b].active;
+        if (outA || outB) {
+          if (outA && outB) { x.done = true; x.winner = "BYE"; x.loser = "BYE"; x.w = "a"; }
+          else settleNode(x, outA ? "b" : "a");
+          x.auto = true; changed = true;
+        }
+      });
+    }
+  }
+  function bracketRound(s) {
+    var st = s.st || (s.st = {});
+    if (!st.br) st.br = buildBracket(s);
+    var br = st.br, r = s.rounds.length;
+    if (r) {
+      var last = s.rounds[r - 1];
+      last.matches.forEach(function (m) {
+        var x = br.nodes[m.bnode];
+        if (!x || x.done) return;
+        var w = winnerOf(s, m);
+        if (w) settleNode(x, w);
+      });
+    }
+    resolveBracket(s, br);
+    var ready = br.nodes.filter(function (x) { return !x.done && x.a !== undefined && x.a !== null && x.b !== undefined && x.b !== null; })
+      .sort(function (p, q) { return p.stage - q.stage || p.id - q.id; });
+    if (!ready.length) { br.finished = true; return null; }
+    var take = ready.slice(0, s.courts.length), playing = {};
+    var matches = take.map(function (x, i) {
+      playing[x.a] = playing[x.b] = true;
+      return { court: i, sideA: [x.a], sideB: [x.b], bnode: x.id, label: x.label };
+    });
+    var out = bracketOut(s, br);
+    var waiting = activeIds(s).filter(function (id) { return !playing[id] && !out[id]; });
+    var gone = activeIds(s).filter(function (id) { return !playing[id] && out[id]; });
+    return finishRound(s, { index: r, matches: matches, sitting: waiting.concat(gone), waiting: waiting, finished: gone });
+  }
+  // Players with nothing left to play.
+  function bracketOut(s, br) {
+    var still = {};
+    br.nodes.forEach(function (x) {
+      if (x.done || x.skip) return;
+      [x.srcA, x.srcB].forEach(function (f) { var v = feedValue(br, f); if (v) still[v] = true; });
+      if (x.a) still[x.a] = still[x.b] = true;
+      if (x.ifB !== undefined) { var g = br.nodes[x.ifB]; if (g.a) { still[g.a] = still[g.b] = true; } }
+    });
+    // anyone still waiting on an unfinished earlier game is also still in
+    br.nodes.forEach(function (x) {
+      if (!x.done) [x.srcA, x.srcB].forEach(function (f) {
+        if (f && f.from !== undefined && !br.nodes[f.from].done) {
+          var src = br.nodes[f.from]; if (src.a) still[src.a] = true; if (src.b) still[src.b] = true;
+        }
+      });
+    });
+    var out = {};
+    s.order.forEach(function (id) { if (!still[id]) out[id] = true; });
+    return out;
+  }
+  function bracketPlaces(s) {
+    var br = s.st && s.st.br, pl = {};
+    if (!br) return pl;
+    if (br.kind === "compass") {
+      br.nodes.forEach(function (x) {
+        if (!x.done || !x.place) return;
+        if (x.winner && x.winner !== "BYE") pl[x.winner] = x.place.w;
+        if (x.loser && x.loser !== "BYE") pl[x.loser] = x.place.l;
+      });
+      // byes leave gaps; close them up
+      var ids = Object.keys(pl).sort(function (a, b) { return pl[a] - pl[b]; }), out = {};
+      ids.forEach(function (id, i) { out[id] = i > 0 && pl[ids[i - 1]] === pl[id] ? out[ids[i - 1]] : i + 1; });
+      return out;
+    }
+    var gf = br.nodes.filter(function (x) { return x.bracket === "G"; })[0], gf2 = br.nodes.filter(function (x) { return x.bracket === "G2"; })[0];
+    var fin = gf2 && gf2.done && !gf2.skip ? gf2 : gf;
+    if (fin && fin.done && fin.winner !== "BYE") { pl[fin.winner] = 1; if (fin.loser !== "BYE") pl[fin.loser] = 2; }
+    // everyone else: by the losers' round they went out in (later is better)
+    var outAt = {};
+    br.nodes.forEach(function (x) {
+      if (x.bracket === "L" && x.done && x.loser && x.loser !== "BYE") outAt[x.loser] = x.lround;
+    });
+    var rest = Object.keys(outAt).sort(function (a, b) { return outAt[b] - outAt[a]; }), place = 3;
+    rest.forEach(function (id, i) {
+      if (pl[id]) return;
+      pl[id] = i > 0 && outAt[rest[i - 1]] === outAt[id] && pl[rest[i - 1]] ? pl[rest[i - 1]] : place + i;
+    });
+    return pl;
+  }
+  function bracketFinished(s) { return !!(s.st && s.st.br && s.st.br.finished); }
+
   var api = {
+    STYLES: STYLES, styleInfo: styleInfo, next: next, canShuffle: canShuffle, reshuffle: reshuffle,
+    playersChanged: playersChanged, winnerOf: winnerOf, standings: standings, bracketPlaces: bracketPlaces,
+    bracketFinished: bracketFinished,
+    mixedPlan: function (nm, nf, C, combo) { return courtPlan({ style: combo ? "combo" : "mixed" }, nm, nf, C, 0); },
     ladderRound: ladderRound,
     createSession: createSession, addUnit: addUnit, removeUnit: removeUnit,
     restoreUnit: restoreUnit, nextRound: nextRound, activeIds: activeIds,
@@ -992,13 +1766,17 @@
     if (inExe || document.fullscreenElement || !wantFull) return;
     wantFull = false;
     if ($("run").classList.contains("hidden")) return;
+    if (!$("helpView").classList.contains("hidden")) { closeHelp(); return; }
+    if (!$("pdView").classList.contains("hidden")) { closePd(); return; }
+    if (!$("sumView").classList.contains("hidden")) { closeSum(); return; }
     if (!$("editOverlay").classList.contains("hidden")) { closeEdit(); return; }
     if (!$("board").classList.contains("hidden")) { closeBoard(); return; }
     leaveRun();
   });
 
   // ---------- state ----------
-  var settings = { mode: "doubles", keepScore: false, seeded: false, ladder: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
+  var OPT_DEFAULTS = { games: 3, fives: true, move: 1, cap: 3, reset: true };
+  var settings = { mode: "doubles", style: "rotation", opt: Object.assign({}, OPT_DEFAULTS), balance: false, timer: 0, keepScore: false, courtCount: 3, courtLabels: [], players: { doubles: "", singles: "", teams: "" } };
   var session = null;   // engine session
   var view = 0;         // index of round being shown
 
@@ -1007,6 +1785,90 @@
     singles: "1 v 1. Opponents rotate every round.",
     teams: "Fixed pairs play 2 v 2. The same two people stay together all session; opponents rotate."
   };
+
+  // ---------- play styles ----------
+  var STYLE_ORDER = ["rotation", "seeded", "mixed", "combo", "scramble", "ladder", "throne", "river", "cream", "challenge", "compass", "double"];
+  var STYLE_UI = {
+    rotation: { name: "Rotation (random mix)", hint: "Fair shares of games and sit-outs, with partners and opponents mixed up as much as possible." },
+    seeded: { name: "Seeded", hint: "Rank everyone before you start. The best play together on the top court, and so on down; after every round they're re-ranked by win rate, then points margin per game." },
+    mixed: { name: "Mixed doubles", hint: "Every pair is a man and a woman. If the numbers don't match, the spare players fill men's or women's courts." },
+    combo: { name: "Combo (mixed + same-sex)", hint: "Rounds alternate: mixed pairs one round, men's and women's doubles the next." },
+    scramble: { name: "Scramble", hint: "Groups of 4 (or 5) share a court for a few games, playing with each partner in turn; then everyone is mixed up again." },
+    ladder: { name: "Ladder (King of the court)", hint: "Everyone plays every round. Round 1 is random; then winners move up a court and losers down, splitting up to play each other." },
+    throne: { name: "Claim the Throne", hint: "A ladder that starts from your seeding, with points for every win: more on higher courts. Everyone plays every round." },
+    river: { name: "Up & Down the River", hint: "Seeded groups play a few games on a court; then the top player moves up a court and the bottom player down. Points for wins, more on higher courts." },
+    cream: { name: "Cream of the Crop", hint: "Round 1 groups mix strong and weaker players. Then everyone is sorted onto courts by results, and after that the top two on each court move up and the bottom two down." },
+    challenge: { name: "Challenge court", hint: "Winners stay on and challengers come on from the queue. Winners go off after a set number of wins in a row." },
+    compass: { name: "Knockout: Compass draw", hint: "Every round's losers start a new draw, so everyone plays every round and every finishing place is decided." },
+    double: { name: "Knockout: Double elimination", hint: "Two defeats and you're out. The winners' and losers' brackets meet in a grand final." }
+  };
+  var MODE_LETTER = { doubles: "d", singles: "s", teams: "t" };
+  var RANKED_COURTS = { seeded: 1, ladder: 1, throne: 1, river: 1, cream: 1 };
+  var LOCKING = { ladder: 1, throne: 1, river: 1, cream: 1, challenge: 1, compass: 1, double: 1 };
+  var BALANCEABLE = { rotation: 1, mixed: 1, combo: 1 };
+  function styleFits(st, mode) { return !!(E.STYLES[st] && E.STYLES[st].modes.indexOf(MODE_LETTER[mode]) >= 0); }
+  function curStyle() { return styleFits(settings.style, settings.mode) ? settings.style : "rotation"; }
+  function curInfo() { return E.styleInfo(curStyle()); }
+  function styleLabel(st) { return (STYLE_UI[st] || STYLE_UI.rotation).name; }
+  function normOpt(o) {
+    o = o || {};
+    var int = function (v, lo, hi, d) { v = parseInt(v, 10); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; };
+    return { games: int(o.games, 1, 10, 3), fives: o.fives !== false, move: +o.move === 2 ? 2 : 1, cap: int(o.cap, 0, 20, 3), reset: o.reset !== false };
+  }
+
+  function renderStyle() {
+    var box = $("styleSel"), st = curStyle(), info = E.styleInfo(st);
+    box.innerHTML = "";
+    STYLE_ORDER.forEach(function (k) {
+      if (!styleFits(k, settings.mode)) return;
+      var o = document.createElement("option"); o.value = k; o.textContent = STYLE_UI[k].name; box.appendChild(o);
+    });
+    box.value = st;
+    $("styleHint").textContent = STYLE_UI[st].hint;
+    $("keepHint").textContent = info.results ? "Enter each court's score before moving on. Without scores, you tap the winning side on each court instead." :
+      "Enter each court's score before moving to the next round.";
+    $("balanceRow").classList.toggle("hidden", !BALANCEABLE[st]);
+    $("balanceHint").classList.toggle("hidden", !BALANCEABLE[st]);
+    $("balance").checked = !!settings.balance;
+    if (document.activeElement !== $("timerMin")) $("timerMin").value = settings.timer || 0;
+    var opts = $("styleOpts");
+    if (opts.dataset.for === st + settings.mode && opts.contains(document.activeElement)) return;
+    opts.dataset.for = st + settings.mode; opts.innerHTML = "";
+    var o = settings.opt;
+    var num = function (label, k, lo, hi, after) {
+      var row = document.createElement("div"); row.className = "optrow";
+      var l = document.createElement("label"); l.textContent = label; row.appendChild(l);
+      var inp = document.createElement("input"); inp.type = "number"; inp.min = lo; inp.max = hi; inp.value = o[k];
+      inp.addEventListener("input", function () { var v = parseInt(inp.value, 10); if (isFinite(v)) { o[k] = Math.max(lo, Math.min(hi, v)); persist(); validate(); } });
+      inp.addEventListener("change", function () { inp.value = o[k]; });
+      row.appendChild(inp);
+      if (after) { var a = document.createElement("span"); a.className = "muted"; a.textContent = after; row.appendChild(a); }
+      opts.appendChild(row);
+    };
+    var chk = function (label, k) {
+      var l = document.createElement("label"); l.className = "check";
+      var c = document.createElement("input"); c.type = "checkbox"; c.checked = o[k] !== false;
+      c.addEventListener("change", function () { o[k] = c.checked; persist(); validate(); });
+      l.appendChild(c); l.appendChild(document.createTextNode(" " + label)); opts.appendChild(l);
+    };
+    if (info.blocks) {
+      num("Games per round on each court", "games", 1, 10, "(3 = everyone partners everyone on the court once)");
+      chk("Put spare players on courts of 5 (one rests each game) instead of sitting them out", "fives");
+    }
+    if (st === "river") {
+      var row = document.createElement("div"); row.className = "optrow";
+      row.innerHTML = "<label>Players moving up and down each round</label>";
+      var sel2 = document.createElement("select");
+      [["1", "1 (top player up, bottom player down)"], ["2", "2 (top two up, bottom two down)"]].forEach(function (x) {
+        var op = document.createElement("option"); op.value = x[0]; op.textContent = x[1]; sel2.appendChild(op);
+      });
+      sel2.value = String(o.move || 1);
+      sel2.addEventListener("change", function () { o.move = +sel2.value; persist(); });
+      row.appendChild(sel2); opts.appendChild(row);
+    }
+    if (st === "challenge") num("Winners come off after", "cap", 0, 20, "wins in a row (0 = never)");
+    if (st === "double") chk("If the losers' bracket winner wins the grand final, play a decider", "reset");
+  }
 
   // ---------- setup screen ----------
   function courtLabel(i) {
@@ -1050,6 +1912,55 @@
     renderPicker(); persist();
   }
 
+  // What a style needs, and what the setup will give. err = a reason Start is blocked.
+  function describeStyle(st, units) {
+    var info = E.styleInfo(st), n = units.length, C = settings.courtCount, mode = settings.mode;
+    var pl = function (k, w) { return k + " " + w + (k === 1 ? "" : "s"); };
+    var noun = mode === "teams" ? "team" : "player", html;
+    if (info.bracket) {
+      if (n < 2) return { ok: false, html: "Need at least <b>2</b> " + noun + "s for a knockout." };
+      var P = 2; while (P < n) P *= 2;
+      var rounds = Math.round(Math.log(P) / Math.LN2), byes = P > n ? " with " + pl(P - n, "bye") + " for the top seeds" : "";
+      html = "<b>" + pl(n, noun) + "</b> on <b>" + pl(C, "court") + "</b> → a draw of " + P + byes + "; " +
+        (st === "compass" ? "everyone plays up to <b>" + rounds + "</b> games and every place is decided." :
+          "<b>" + (2 * n - 2) + "</b> or <b>" + (2 * n - 1) + "</b> games in all.");
+      return { ok: true, html: html };
+    }
+    if (info.sexes) {
+      var unset = units.filter(function (u) { return u.sex !== "m" && u.sex !== "f"; });
+      var nm = units.filter(function (u) { return u.sex === "m"; }).length, nf = units.filter(function (u) { return u.sex === "f"; }).length;
+      if (unset.length) return { ok: false, html: "<b>" + nm + "</b> men, <b>" + nf + "</b> women and <b>" + unset.length + "</b> not yet set.",
+        err: "Set man or woman for: " + unset.map(function (u) { return u.name; }).join(", ") + " (under Men and women, below)." };
+      var plan = E.mixedPlan(nm, nf, C, st === "combo"), used = plan ? plan.x + plan.y + plan.z : 0;
+      if (!used) return { ok: false, html: "<b>" + nm + "</b> men and <b>" + nf + "</b> women: not enough to fill a court (a court needs two men and two women, or four of either)." };
+      var playing = 4 * used;
+      html = "<b>" + nm + "</b> men and <b>" + nf + "</b> women on <b>" + pl(C, "court") + "</b> → <b>" + playing + "</b> playing, <b>" + (n - playing) + "</b> sitting out each round";
+      if (st === "mixed") html += "<br><span style='color:var(--muted)'>" + pl(plan.x, "mixed court") + (plan.y ? ", " + plan.y + " men's" : "") + (plan.z ? ", " + plan.z + " women's" : "") + " each round.</span>";
+      return { ok: true, html: html };
+    }
+    if (info.exact) {
+      var need = Math.ceil(n / 4);
+      if (n < 4) return { ok: false, html: "Need at least <b>4</b> players for one court." };
+      if (n % 4) return { ok: false, html: "<b>" + pl(n, "player") + "</b>", err: styleLabel(st) + " needs everyone playing, so the number of players must be a multiple of 4 (you have " + n + ")." };
+      if (need > C) return { ok: false, html: "<b>" + pl(n, "player") + "</b> on <b>" + pl(C, "court") + "</b>", err: styleLabel(st) + " needs everyone playing: " + n + " players need " + need + " courts." };
+      return { ok: true, html: "<b>" + pl(n, "player") + "</b> on <b>" + pl(need, "court") + "</b>, everyone playing every round" +
+        (need < C ? "<br><span style='color:var(--muted)'>Only the first " + need + " courts will be used.</span>" : "") };
+    }
+    if (info.blocks) {
+      var groups = Math.min(C, Math.floor(n / 4));
+      if (!groups) return { ok: false, html: "Need at least <b>4</b> players for one court." };
+      var extra = n - groups * 4, n5 = settings.opt.fives === false ? 0 : Math.min(extra, groups), sit = extra - n5;
+      return { ok: true, html: "<b>" + pl(n, "player") + "</b> → <b>" + pl(groups, "court") + "</b>" + (n5 ? " (" + n5 + " with 5 players, one resting each game)" : "") +
+        ", <b>" + sit + "</b> sitting out each round of " + pl(settings.opt.games || 3, "game") };
+    }
+    if (st === "challenge") {
+      var per = E.unitsPerCourt(mode), u2 = Math.min(C, Math.floor(n / per));
+      if (!u2) return { ok: false, html: "Need at least <b>" + per + "</b> " + noun + "s for one court." };
+      return { ok: true, html: "<b>" + pl(n, noun) + "</b> on <b>" + pl(u2, "court") + "</b> → <b>" + u2 * per + "</b> playing, <b>" + (n - u2 * per) + "</b> waiting in the queue" };
+    }
+    return describeCapacity(n, C, mode);
+  }
+
   function describeCapacity(nUnits, courts, mode) {
     var per = E.unitsPerCourt(mode);
     var used = Math.min(courts, Math.floor(nUnits / per));
@@ -1072,25 +1983,21 @@
       sel.pairs.forEach(function (pr) {
         paired[pr[0]] = paired[pr[1]] = true;
         var a = nameOf(pr[0]), b = nameOf(pr[1]);
-        units.push({ name: a + " & " + b, members: [a, b], key: pr[0] + "+" + pr[1] });
+        units.push({ name: a + " & " + b, members: [a, b], key: pr[0] + "+" + pr[1], pids: pr.filter(function (k) { return k.indexOf("g:") !== 0; }) });
       });
       var loose = keys.filter(function (k) { return !paired[k]; });
       if (loose.length) errors.push(loose.length === 1 ? "1 ticked player isn't in a pair yet." :
         loose.length + " ticked players aren't in a pair yet.");
     } else {
-      units = keys.map(function (k) { return { name: nameOf(k), key: k }; });
+      units = keys.map(function (k) { return { name: nameOf(k), key: k, pids: k.indexOf("g:") === 0 ? [] : [k], sex: sexOfKey(k) }; });
     }
     if (seededOn()) {                       // start the session in seeding order
       syncSeed();
       var pos = {}; sel.seed.forEach(function (k, i) { pos[k] = i; });
       units.sort(function (x, y) { return (pos[x.key] === undefined ? 1e9 : pos[x.key]) - (pos[y.key] === undefined ? 1e9 : pos[y.key]); });
     }
-    var cap = describeCapacity(units.length, settings.courtCount, settings.mode);
-    if (ladderOn() && units.length) {
-      var need = Math.ceil(units.length / 4);
-      if (units.length % 4) errors.push("Ladder needs everyone playing, so the number of players must be a multiple of 4 (you have " + units.length + ").");
-      else if (need > settings.courtCount) errors.push("Ladder needs everyone playing: " + units.length + " players need " + need + " courts.");
-    }
+    var cap = describeStyle(curStyle(), units);
+    if (cap.err && units.length) errors.push(cap.err);
     $("summary").innerHTML = cap.html;
     $("errors").innerHTML = errors.map(esc).join("<br>");
     var ok = cap.ok && !errors.length;
@@ -1115,6 +2022,7 @@
       $("resumeInfo").textContent = (m.charAt(0).toUpperCase() + m.slice(1)) + ", " +
         session.rounds.length + " round" + (session.rounds.length === 1 ? "" : "s") +
         " played" + (session.scoring ? ", keeping score" : "") + ". Starting a new session will replace it.";
+      $("resumeInfo").textContent = (session.style && session.style !== "rotation" ? styleLabel(session.style) + " · " : "") + $("resumeInfo").textContent;
     } else {
       $("resumeBox").classList.add("hidden");
     }
@@ -1130,7 +2038,7 @@
   var DB_FILE = "players.json", BACKUP_DIR = "Backups", MAX_BACKUPS = 50, BACKUP_EVERY_MS = 5 * 60 * 1000;
   var MIRROR_KEY = KIOSK ? KP + "db" : "fairDinkum.db", SEL_KEY = KIOSK ? KP + "selection" : "fairDinkum.selection",
       MIGRATED_KEY = KIOSK ? KP + "migrated" : "fairDinkum.migrated";
-  var db = { version: 1, players: [], groups: [], sessions: [] };
+  var db = { version: 1, players: [], groups: [], sessions: [], results: [] };
   var store = { fsApi: typeof window.showDirectoryPicker === "function", dir: null, state: "none", lastSaved: null, lastBackup: 0, error: "" };
   // state: none (no folder chosen) | reconnect (need permission again) | ok | error | local (browser can't save files)
   var testDir = /[?&]testdir=opfs/.test(location.search);   // automated tests only
@@ -1167,7 +2075,7 @@
     if (!d || !Array.isArray(d.players) || !Array.isArray(d.groups)) throw new Error("That isn't a Fair Dinkum player database.");
     var ids = {};
     var players = d.players.filter(function (p) { return p && p.id && typeof p.name === "string" && p.name.trim(); })
-      .map(function (p) { ids[p.id] = true; return { id: String(p.id), name: p.name.trim() }; });
+      .map(function (p) { ids[p.id] = true; var o = { id: String(p.id), name: p.name.trim() }; if (p.sex === "m" || p.sex === "f") o.sex = p.sex; return o; });
     var groups = d.groups.filter(function (g) { return g && g.id && typeof g.name === "string"; })
       .map(function (g) {
         return { id: String(g.id), name: g.name.trim() || "Group",
@@ -1179,13 +2087,25 @@
           mode: ["doubles", "singles", "teams"].indexOf(x.mode) >= 0 ? x.mode : "doubles",
           courtCount: Math.max(1, Math.min(30, parseInt(x.courtCount, 10) || 1)),
           courtLabels: Array.isArray(x.courtLabels) ? x.courtLabels.map(String) : [],
-          keepScore: !!x.keepScore, seeded: !!x.seeded, ladder: !!x.ladder,
+          keepScore: !!x.keepScore,
+          style: typeof x.style === "string" && E.STYLES[x.style] ? x.style : (x.ladder ? "ladder" : x.seeded ? "seeded" : "rotation"),
+          opt: normOpt(x.opt), balance: !!x.balance, timer: Math.max(0, Math.min(90, parseInt(x.timer, 10) || 0)),
+          gsex: (function (g) { var o = {}; if (g && typeof g === "object") Object.keys(g).forEach(function (k) { if (g[k] === "m" || g[k] === "f") o[k] = g[k]; }); return o; })(x.gsex),
           seed: (Array.isArray(x.seed) ? x.seed : []).map(String),
           playerIds: (x.playerIds || []).map(String).filter(function (m) { return ids[m]; }),
           guests: (x.guests || []).map(String),
           pairs: (x.pairs || []).filter(function (pr) { return Array.isArray(pr) && pr.length === 2; }).map(function (pr) { return pr.map(String); }) };
       });
-    var out = { version: 1, players: players, groups: groups, sessions: sessions };
+    var results = (Array.isArray(d.results) ? d.results : []).filter(function (x) { return x && x.id && x.by && typeof x.by === "object"; })
+      .map(function (x) {
+        var by = {};
+        Object.keys(x.by).forEach(function (pid) {
+          var v = x.by[pid];
+          if (ids[pid] && Array.isArray(v) && v.length === 3 && v.every(function (n) { return typeof n === "number" && isFinite(n); })) by[pid] = v;
+        });
+        return { id: String(x.id), when: +x.when || 0, by: by };
+      });
+    var out = { version: 1, players: players, groups: groups, sessions: sessions, results: results };
     if (d.kiosk && /^[a-z0-9]{8,32}$/.test(d.kiosk.id) && /^[A-Za-z0-9_-]{16,64}$/.test(d.kiosk.key)) out.kiosk = { id: d.kiosk.id, key: d.kiosk.key };
     return out;
   }
@@ -1452,18 +2372,18 @@
   // =====================================================================
   // Setup: choosing who's playing today
   // =====================================================================
-  var sel = { ids: {}, guests: [], pairs: [], seed: [], group: "all", pick: null };
+  var sel = { ids: {}, guests: [], pairs: [], seed: [], gsex: {}, group: "all", pick: null };
   // keys: a player id, or "g:" + name for a guest who isn't in the database
 
   function loadSel() {
     try {
       var s = JSON.parse(localStorage.getItem(SEL_KEY) || "null");
-      if (s) { sel.ids = s.ids || {}; sel.guests = s.guests || []; sel.pairs = s.pairs || []; sel.seed = s.seed || []; sel.group = s.group || "all"; }
+      if (s) { sel.ids = s.ids || {}; sel.guests = s.guests || []; sel.pairs = s.pairs || []; sel.seed = s.seed || []; sel.gsex = s.gsex || {}; sel.group = s.group || "all"; }
     } catch (e) {}
   }
   function saveSel() {
     if (editCtx) return;
-    try { localStorage.setItem(SEL_KEY, JSON.stringify({ ids: sel.ids, guests: sel.guests, pairs: sel.pairs, seed: sel.seed, group: sel.group })); } catch (e) {}
+    try { localStorage.setItem(SEL_KEY, JSON.stringify({ ids: sel.ids, guests: sel.guests, pairs: sel.pairs, seed: sel.seed, gsex: sel.gsex || {}, group: sel.group })); } catch (e) {}
   }
   function nameOf(k) {
     if (k.indexOf("g:") === 0) return k.slice(2);
@@ -1485,8 +2405,7 @@
   }
 
   // ---------- seeding ----------
-  function seededOn() { return !!(settings.keepScore && settings.seeded && !ladderOn()); }
-  function ladderOn() { return !!(settings.mode === "doubles" && settings.ladder); }
+  function seededOn() { return !!curInfo().seedList; }
   // The things being ranked: players, or pairs in Teams mode (key "a+b").
   function unitKeys() {
     if (settings.mode === "teams") return sel.pairs.map(function (pr) { return pr[0] + "+" + pr[1]; });
@@ -1511,16 +2430,14 @@
   }
   var dragFrom = -1;
   function renderSeed() {
-    var on = seededOn();
+    var on = seededOn(), st = curStyle(), br = E.styleInfo(st).bracket;
     $("seedArea").classList.toggle("hidden", !on);
-    $("courtRankHint").classList.toggle("hidden", !on && !ladderOn());
-    $("courtRankWhat").textContent = ladderOn() ? "Ladder" : "Seeded session";
-    $("seededRow").classList.toggle("off", !settings.keepScore || ladderOn());
-    $("seeded").disabled = !settings.keepScore || ladderOn();
-    $("seeded").checked = !!settings.seeded && !ladderOn();
-    $("ladderRow").classList.toggle("off", settings.mode !== "doubles");
-    $("ladder").disabled = settings.mode !== "doubles";
-    $("ladder").checked = ladderOn();
+    $("courtRankHint").classList.toggle("hidden", !RANKED_COURTS[st]);
+    $("courtRankWhat").textContent = styleLabel(st);
+    $("seedTitle").textContent = br ? "Draw order (1 = top seed)" : "Seeding (1 = strongest)";
+    $("seedHint").textContent = br ? "Drag to reorder, or use the arrows. Top seeds are kept apart and get any byes." :
+      st === "cream" ? "Drag to reorder, or use the arrows. Round 1 groups each get a mix of strong and weaker players; after that, results take over." :
+      "Drag to reorder, or use the arrows. This sets round 1; after that, results take over.";
     if (!on) return;
     syncSeed();
     var ol = $("seedList"); ol.innerHTML = "";
@@ -1646,8 +2563,86 @@
         }));
       });
     }
+    renderStyle();
+    renderSex();
     renderSeed();
     validate();
+  }
+
+  // ---------- men and women (Mixed doubles, Combo) ----------
+  function sexOfKey(k) {
+    if (k.indexOf("g:") === 0) return (sel.gsex || {})[k.slice(2)] || "";
+    var p = playerById(k); return p && p.sex || "";
+  }
+  function setSexOfKey(k, v) {
+    if (k.indexOf("g:") === 0) { sel.gsex = sel.gsex || {}; sel.gsex[k.slice(2)] = v; saveSel(); }
+    else { var p = playerById(k); if (!p || !canEdit()) return; p.sex = v; saveDb(); }
+  }
+  function renderSex() {
+    var on = !!curInfo().sexes && settings.mode === "doubles";
+    $("sexArea").classList.toggle("hidden", !on);
+    if (!on) return;
+    var box = $("sexList"); box.innerHTML = "";
+    var keys = selectedKeys();
+    if (!keys.length) { var e = document.createElement("span"); e.className = "none"; e.textContent = "Tick players above."; box.appendChild(e); return; }
+    keys.forEach(function (k) {
+      var v = sexOfKey(k);
+      var row = document.createElement("div"); row.className = "sexrow" + (v ? "" : " unset");
+      var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = nameOf(k); row.appendChild(nm);
+      var seg = document.createElement("span"); seg.className = "mini";
+      [["m", "Man"], ["f", "Woman"]].forEach(function (x) {
+        var b = document.createElement("button"); b.textContent = x[1]; if (v === x[0]) b.className = "on";
+        b.addEventListener("click", function () { setSexOfKey(k, v === x[0] ? "" : x[0]); renderSex(); validate(); });
+        seg.appendChild(b);
+      });
+      row.appendChild(seg); box.appendChild(row);
+    });
+  }
+
+  // ---------- past results (for balancing and seeding) ----------
+  function playerRecord(pid) {
+    var g = 0, w = 0, pd = 0;
+    (db.results || []).forEach(function (r) { var x = r.by[pid]; if (x) { g += x[0]; w += x[1]; pd += x[2]; } });
+    return { g: g, w: w, pd: pd };
+  }
+  function ratingOfPids(pids) {
+    var t = 0, k = 0;
+    (pids || []).forEach(function (pid) { var r = playerRecord(pid); if (r.g) { t += (r.w + 1) / (r.g + 2); k++; } });
+    return k ? t / k : null;
+  }
+  function keyRating(k) {
+    if (k.indexOf("+") > 0) return ratingOfPids(k.split("+").filter(function (x) { return x.indexOf("g:") !== 0; }));
+    return k.indexOf("g:") === 0 ? null : ratingOfPids([k]);
+  }
+  // Store this session's results against each player (replacing what was stored for it before).
+  function saveResults() {
+    if (!session || !session.id || !session.hasBoard) return;
+    var by = {}, any = false;
+    E.standings(session).forEach(function (r) {
+      if (!r.p) return;
+      (session.units[r.id].pids || []).forEach(function (pid) { if (playerById(pid)) { by[pid] = [r.p, r.w, r.m]; any = true; } });
+    });
+    var before = JSON.stringify(db.results || []);
+    db.results = (db.results || []).filter(function (x) { return x.id !== session.id; });
+    if (any) db.results.push({ id: session.id, when: session.started || Date.now(), by: by });
+    if (db.results.length > 500) db.results = db.results.slice(-500);
+    if (JSON.stringify(db.results) !== before) saveDb();
+  }
+  function seedRandom() { for (var i = sel.seed.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = sel.seed[i]; sel.seed[i] = sel.seed[j]; sel.seed[j] = t; } saveSel(); renderSeed(); }
+  function seedRated() {
+    syncSeed();
+    var pos = {}; sel.seed.forEach(function (k, i) { pos[k] = i; });
+    var rated = 0;
+    sel.seed.sort(function (a, b) {
+      var ra = keyRating(a), rb = keyRating(b);
+      if (ra === null && rb === null) return pos[a] - pos[b];
+      if (ra === null) return 1; if (rb === null) return -1;
+      return rb - ra || pos[a] - pos[b];
+    });
+    sel.seed.forEach(function (k) { if (keyRating(k) !== null) rated++; });
+    saveSel(); renderSeed();
+    toast(rated ? "Ordered by win rate in earlier sessions (" + rated + " of " + sel.seed.length + " have past results; the rest are at the bottom)." :
+      "No past results yet. They're collected from sessions with scores or tapped winners.", !!rated);
   }
 
   function addGuest() {
@@ -1739,6 +2734,8 @@
       var row = document.createElement("div"); row.className = "prow tall";
       var n = document.createElement("div"); n.className = "n";
       var nm = document.createElement("div"); nm.textContent = p.name; n.appendChild(nm);
+      var rec = playerRecord(p.id);
+      if (rec.g) { var rs = document.createElement("span"); rs.className = "rec"; rs.textContent = rec.g + " game" + (rec.g === 1 ? "" : "s") + " recorded · " + Math.round(100 * rec.w / rec.g) + "% won"; nm.appendChild(rs); }
       var tags = document.createElement("div"); tags.className = "tags";
       groupsOfPlayer(p.id).forEach(function (g) {
         tags.appendChild(tag(g.name, "grp", function () {
@@ -2143,7 +3140,7 @@
       var cnt = planCount(ss);
       dd.textContent = MODE_NAME[ss.mode] + " · " + cnt + " player" + (cnt === 1 ? "" : "s") +
         (ss.mode === "teams" ? " (" + ss.pairs.length + " pair" + (ss.pairs.length === 1 ? "" : "s") + ")" : "") +
-        " · " + ss.courtCount + " court" + (ss.courtCount === 1 ? "" : "s") + (ss.ladder && ss.mode === "doubles" ? " · ladder" : "") + (ss.keepScore ? " · keeping score" : "");
+        " · " + ss.courtCount + " court" + (ss.courtCount === 1 ? "" : "s") + (ss.style && ss.style !== "rotation" && styleFits(ss.style, ss.mode) ? " · " + styleLabel(ss.style) : "") + (ss.keepScore ? " · keeping score" : "");
       info.appendChild(dd);
       row.appendChild(info);
       if (live) {
@@ -2168,14 +3165,14 @@
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function loadPlanIntoForm(ss) {
     settings.mode = ss.mode; settings.courtCount = ss.courtCount; settings.courtLabels = ss.courtLabels.slice(); settings.keepScore = ss.keepScore;
-    settings.seeded = !!ss.seeded; sel.seed = (ss.seed || []).slice(); settings.ladder = !!ss.ladder;
+    settings.style = ss.style || "rotation"; settings.opt = normOpt(ss.opt); settings.balance = !!ss.balance; settings.timer = ss.timer || 0;
+    sel.seed = (ss.seed || []).slice(); sel.gsex = clone(ss.gsex || {});
     sel.ids = {}; ss.playerIds.forEach(function (id) { sel.ids[id] = true; });
     sel.guests = ss.guests.slice(); sel.pairs = clone(ss.pairs); sel.group = "all"; sel.pick = null;
   }
   function refreshForm() {
     $("courtCount").value = settings.courtCount;
     $("keepScore").checked = !!settings.keepScore;
-    $("seeded").checked = !!settings.seeded;
     renderCourtLabels();
     setMode(settings.mode);
   }
@@ -2217,7 +3214,8 @@
     rec.courtLabels = settings.courtLabels.slice(0, settings.courtCount); rec.keepScore = !!settings.keepScore;
     rec.playerIds = db.players.filter(function (p) { return sel.ids[p.id]; }).map(function (p) { return p.id; });
     rec.guests = sel.guests.slice(); rec.pairs = clone(sel.pairs);
-    rec.seeded = !!settings.seeded; syncSeed(); rec.seed = sel.seed.slice(); rec.ladder = !!settings.ladder;
+    rec.style = curStyle(); rec.opt = clone(settings.opt); rec.balance = !!settings.balance; rec.timer = settings.timer || 0;
+    rec.gsex = clone(sel.gsex || {}); syncSeed(); rec.seed = sel.seed.slice();
     saveDb();
     endEdit();
     toast("“" + name + "” saved for " + fmtWhen(when) + ".", true);
@@ -2253,6 +3251,7 @@
     var label = session.schedName ? "“" + session.schedName + "”" : "this session";
     if (!confirm("Finish " + label + "? The rounds" + (session.hasBoard ? " and leaderboard" : "") +
       " will be cleared" + (session.schedId ? " and it will be removed from Scheduled sessions" : "") + ".")) return;
+    saveResults();
     if (session.schedId) { db.sessions = db.sessions.filter(function (x) { return x.id !== session.schedId; }); saveDb(); }
     session = null;
     showResume(); renderSchedule();
@@ -2328,18 +3327,31 @@
     if (!units) return;
     if (session && session.rounds.length &&
         !confirm("A session is already in progress. Start a new one and discard it?")) return;
+    saveResults();                     // keep the results of the session being replaced
     var courts = [];
     for (var i = 0; i < settings.courtCount; i++) courts.push(courtLabel(i));
     session = E.createSession({ mode: settings.mode, courts: courts, units: units });
+    session.order.forEach(function (id, i) {
+      var u = session.units[id], src = units[i];
+      u.sex = src.sex || ""; u.pids = src.pids || [];
+      var rt = ratingOfPids(u.pids); if (rt !== null) u.rating = rt;
+    });
     session.scoring = !!settings.keepScore;
-    session.seeded = seededOn();
-    session.ladder = ladderOn();
-    session.hasBoard = session.scoring || session.ladder;
+    session.style = curStyle();
+    session.opt = normOpt(settings.opt);
+    session.balance = !!settings.balance && !!BALANCEABLE[session.style];
+    session.hasBoard = session.scoring || !!E.styleInfo(session.style).results;
+    session.id = uid(); session.started = Date.now(); session.timerMin = settings.timer || 0;
     session.schedId = launching ? launching.id : null;
     session.schedName = launching ? launching.name : null;
     computeDisplayNames(session);
-    E.nextRound(session, rankingOpts());
+    if (!E.next(session)) {
+      var stl = styleLabel(session.style); session = null;
+      toast("Couldn't make the first round of " + stl + ". Check the players and courts.");
+      return;
+    }
     view = 0;
+    resetTimer();
     enterRun();
   }
 
@@ -2358,6 +3370,7 @@
   }
 
   function leaveRun() {
+    saveResults();
     hostFull(false);
     closeBoard();
     $("toast").classList.add("hidden");
@@ -2411,7 +3424,7 @@
     $("roundNo").textContent = view + 1;
     $("tbPrev").disabled = view === 0;
     var v = $("viewing");
-    if (view < latest) { v.textContent = "Earlier round — latest is " + (latest + 1) + (session.ladder ? " (results locked)" : ""); v.classList.remove("hidden"); }
+    if (view < latest) { v.textContent = "Earlier round — latest is " + (latest + 1) + (LOCKING[session.style] ? " (results locked)" : ""); v.classList.remove("hidden"); }
     else v.classList.add("hidden");
 
     var shape = gridShape(rd.matches.length);
@@ -2421,7 +3434,7 @@
     box.innerHTML = "";
     rd.matches.forEach(function (m) {
       var c = document.createElement("div"); c.className = "court";
-      var lab = document.createElement("div"); lab.className = "label"; lab.textContent = session.courts[m.court];
+      var lab = document.createElement("div"); lab.className = "label"; lab.textContent = session.courts[m.court] + courtNote(rd, m);
       var body = document.createElement("div"); body.className = "body";
       [["a", m.sideA], ["vs"], ["b", m.sideB]].forEach(function (part) {
         if (part[0] === "vs") {
@@ -2438,9 +3451,9 @@
           var sb = scoreBox(m, part[0]);
           if (locked()) sb.readOnly = true;
           s.appendChild(sb);
-        } else if (session.ladder || m.winner) {
+        } else if (needsTap() || m.winner) {
           var wt = document.createElement("div"); wt.className = "wtag"; wt.textContent = "WON"; s.appendChild(wt);
-          if (session.ladder && !locked()) {
+          if (needsTap() && !locked()) {
             s.classList.add("pick"); s.title = "Tap the winning pair";
             (function (side) {
               s.addEventListener("click", function () { m.winner = m.winner === side ? null : side; markScores(); });
@@ -2452,9 +3465,15 @@
       c.appendChild(lab); c.appendChild(body); box.appendChild(c);
     });
 
-    var sit = rd.sitting;
+    var sit = rd.waiting || rd.sitting;
+    $("sitTitle").textContent = rd.queue ? "Next up" : rd.waiting ? "Waiting" : "Sitting out";
     $("sitbar").classList.toggle("hidden", sit.length === 0);
-    $("sitNames").innerHTML = sit.map(function (id) { return "<span>" + esc(unitDisplay(session.units[id])) + "</span>"; }).join("");
+    $("sitNames").innerHTML = sit.map(function (id, i) {
+      return "<span" + (rd.queue ? " class='q'" : "") + ">" + (rd.queue ? (i + 1) + ". " : "") + esc(unitDisplay(session.units[id])) + "</span>";
+    }).join("");
+    var canShuf = view === session.rounds.length - 1 && E.canShuffle(session);
+    document.querySelectorAll(".shufonly").forEach(function (x) { x.classList.toggle("hidden", !canShuf); });
+    drawTimer();
 
     fitAll(shape);
     fitSitting();
@@ -2482,12 +3501,17 @@
   }
 
   // Ladder: only the latest round's results can be changed.
-  function locked() { return !!(session.ladder && view < session.rounds.length - 1); }
-  // "a", "b" or null — from the scores when scoring, otherwise the tapped winner.
-  function winnerOf(m) {
-    if (session.scoring) return matchState(m) === "done" ? (m.score.a > m.score.b ? "a" : "b") : null;
-    return m.winner || null;
+  function locked() { return !!(LOCKING[session.style] && view < session.rounds.length - 1); }
+  // Results are needed but not scored: tap the winning side.
+  function needsTap() { return !session.scoring && !!E.styleInfo(session.style).results; }
+  function courtNote(rd, m) {
+    if (m.label) return " · " + m.label.charAt(0).toUpperCase() + m.label.slice(1);
+    if (rd.block) return " · game " + (rd.block.game + 1) + " of " + rd.block.games;
+    if (m.streak) return " · winners on " + m.streak + (m.streak === 1 ? " win" : " wins");
+    return "";
   }
+  // "a", "b" or null — from the scores when scoring, otherwise the tapped winner.
+  function winnerOf(m) { return E.winnerOf(session, m); }
 
   // Highlight winners and tied (invalid) scores on the current round.
   function markScores() {
@@ -2521,80 +3545,41 @@
     }
   }
 
-  // Seeded sessions: win rate, then points margin per game; the starting seed
-  // (entry order) breaks ties, and anyone who hasn't played yet counts as 50%.
-  function rateOf(r) { return r.p ? r.w / r.p : 0.5; }
-  function mpgOf(r) { return r.p ? r.m / r.p : 0; }
-  function seedCompare(a, b) {
-    return rateOf(b) - rateOf(a) || mpgOf(b) - mpgOf(a) || session.order.indexOf(a.id) - session.order.indexOf(b.id);
-  }
-  function rankingOpts() {
-    if (!session || !session.seeded) return undefined;
-    var rows = standings().filter(function (r) { return r.active; });
-    return { ranking: rows.map(function (r) { return r.id; }) };
-  }
-
-  // Wins first, then points margin (seeded: win rate, then margin per game). Equal = shared rank.
+  // Standings come from the engine (each style has its own ranking rule).
   function standings() {
-    var t = {};
-    session.order.forEach(function (id) {
-      t[id] = { id: id, name: unitDisplay(session.units[id]), active: session.units[id].active, p: 0, w: 0, l: 0, pf: 0, pa: 0 };
-    });
-    session.rounds.forEach(function (rd) {
-      rd.matches.forEach(function (m) {
-        var w = winnerOf(m);
-        if (!w) return;
-        var sa = session.scoring ? m.score.a : 0, sb = session.scoring ? m.score.b : 0;
-        [[m.sideA, sa, sb, w === "a"], [m.sideB, sb, sa, w === "b"]].forEach(function (x) {
-          x[0].forEach(function (id) {
-            var r = t[id]; r.p++; r.pf += x[1]; r.pa += x[2];
-            if (x[3]) r.w++; else r.l++;
-          });
-        });
-      });
-    });
-    var rows = Object.keys(t).map(function (k) { var r = t[k]; r.m = r.pf - r.pa; return r; })
-      .filter(function (r) { return r.active || r.p > 0; });
-    if (session.seeded) {
-      rows.sort(seedCompare);
-      rows.forEach(function (r, i) {
-        var prev = rows[i - 1];
-        r.rank = prev && prev.p && r.p && rateOf(prev) === rateOf(r) && mpgOf(prev) === mpgOf(r) ? prev.rank : i + 1;
-      });
-      return rows;
-    }
-    rows.sort(function (a, b) { return b.w - a.w || b.m - a.m || a.name.localeCompare(b.name); });
-    rows.forEach(function (r, i) {
-      var prev = rows[i - 1];
-      r.rank = prev && prev.w === r.w && prev.m === r.m ? prev.rank : i + 1;
-    });
-    return rows;
+    return E.standings(session).map(function (r) { r.name = unitDisplay(session.units[r.id]); return r; });
   }
 
   function openBoard() {
-    var rows = standings();
-    var pts = session.scoring;
-    $("boardRule").textContent = session.seeded ? "Ranked by win rate, then points margin per game" : pts ? "Ranked by wins, then points margin" : "Ranked by wins";
+    saveResults();
+    var rows = standings(), st = session.style, info = E.styleInfo(st), pts = session.scoring;
+    $("boardRule").textContent = info.bracket ? "Ranked by finishing place; anyone still playing by wins so far" :
+      info.points ? "Ranked by points (a win is worth more on a higher court), then win rate, then points margin per game" :
+      st === "seeded" ? "Ranked by win rate, then points margin per game" :
+      pts ? "Ranked by wins, then points margin" : "Ranked by wins";
     var done = 0;
     session.rounds.forEach(function (rd) { if (!roundProblem(rd)) done++; });
-    $("boardSub").textContent = done + " of " + session.rounds.length + " round" +
+    $("boardSub").textContent = (info.bracket && E.bracketFinished(session) ? "Knockout finished · " : "") + done + " of " + session.rounds.length + " round" +
       (session.rounds.length === 1 ? "" : "s") + (pts ? " fully scored" : " with results");
+    var showRate = st === "seeded" || !!info.points || !!info.bracket, showPts = !!info.points;
     var perCol = rows.length > 16 ? Math.ceil(rows.length / 2) : rows.length;
     var cols = $("boardCols"); cols.innerHTML = "";
     for (var c = 0; c * perCol < rows.length; c++) {
       var html = "<table><tr><th></th><th class='l'>" + (session.mode === "teams" ? "Team" : "Player") +
-        "</th><th>Played</th><th>Won</th><th>Lost</th>" + (session.seeded ? "<th>Win %</th>" : "") +
+        "</th><th>Played</th><th>Won</th><th>Lost</th>" + (showRate ? "<th>Win %</th>" : "") + (showPts ? "<th>Pts</th>" : "") +
         (pts ? "<th>For</th><th>Agst</th><th>Margin</th>" : "") + "</tr>";
       rows.slice(c * perCol, (c + 1) * perCol).forEach(function (r) {
         var shared = rows.filter(function (x) { return x.rank === r.rank; }).length > 1;
-        html += "<tr" + (r.active ? "" : " class='gone'") + "><td class='rank'>" + (shared ? "=" : "") + r.rank +
+        html += "<tr data-id='" + r.id + "' class='click" + (r.active ? "" : " gone") + "'><td class='rank'>" + (shared ? "=" : "") + r.rank +
           "</td><td class='l'>" + esc(r.name) + (r.active ? "" : " (left)") + "</td><td>" + r.p + "</td><td class='w'>" + r.w +
-          "</td><td>" + r.l + "</td>" + (session.seeded ? "<td>" + (r.p ? Math.round(100 * r.w / r.p) + "%" : "–") + "</td>" : "") +
+          "</td><td>" + r.l + "</td>" + (showRate ? "<td>" + (r.p ? Math.round(100 * r.w / r.p) + "%" : "–") + "</td>" : "") +
+          (showPts ? "<td class='w'>" + r.pts + "</td>" : "") +
           (pts ? "<td>" + r.pf + "</td><td>" + r.pa + "</td><td class='" +
           (r.m > 0 ? "pos" : r.m < 0 ? "neg" : "") + "'>" + (r.m > 0 ? "+" : "") + r.m + "</td>" : "") + "</tr>";
       });
       cols.innerHTML += html + "</table>";
     }
+    cols.querySelectorAll("tr[data-id]").forEach(function (tr) { tr.addEventListener("click", function () { showPlayer(tr.dataset.id); }); });
     $("board").classList.remove("hidden");
     // biggest text that fits the screen
     var sz = window.innerHeight * 0.05, avail = $("boardCols").clientHeight, availW = $("boardCols").clientWidth;
@@ -2657,24 +3642,192 @@
   }
 
   function next() {
-    if (session.ladder) {
-      if (view < session.rounds.length - 1) { view++; render(); return; }
-      var lp = roundProblem(session.rounds[view]);
-      if (lp) { toast(lp); if (session.scoring) focusFirstEmpty(); return; }
-      var ms = session.rounds[view].matches.slice().sort(function (x, y) { return x.court - y.court; });
-      E.ladderRound(session, ms.map(winnerOf));
-      view = session.rounds.length - 1; render();
-      return;
+    var latest = session.rounds.length - 1;
+    var needs = session.scoring || !!E.styleInfo(session.style).results;
+    if (view < latest) {
+      if (needs && !locked()) {
+        var p0 = roundProblem(session.rounds[view]);
+        if (p0) { toast(p0); if (session.scoring) focusFirstEmpty(); return; }
+      }
+      view++; render(); return;
     }
-    if (session.scoring) {
+    if (needs) {
       var prob = roundProblem(session.rounds[view]);
-      if (prob) { toast(prob); focusFirstEmpty(); return; }
+      if (prob) { toast(prob); if (session.scoring) focusFirstEmpty(); return; }
     }
-    if (view < session.rounds.length - 1) { view++; render(); return; }
-    var r = E.nextRound(session, rankingOpts());
-    if (!r) { toast("Not enough players for a court — press E to add players."); return; }
-    view = session.rounds.length - 1; render();
+    var r = E.next(session);
+    if (!r) {
+      if (E.bracketFinished(session)) { saveResults(); toast("That's the end of the knockout. The final places are on the leaderboard.", true); openBoard(); return; }
+      toast("Not enough players for a court — press E to add players."); return;
+    }
+    view = session.rounds.length - 1;
+    resetTimer(); saveResults(); render();
   }
+
+  // ---------- shuffle the latest round ----------
+  function shuffleRound() {
+    if (view !== session.rounds.length - 1) { toast("Go to the latest round to shuffle it."); return; }
+    if (!E.canShuffle(session)) { toast(shuffleWhyNot()); return; }
+    var rd = session.rounds[view];
+    var has = rd.matches.some(function (m) { return m.winner || (m.score && (m.score.a !== null || m.score.b !== null)); });
+    if (has && !confirm("Results have already been entered for this round. Shuffle it anyway? They'll be cleared.")) return;
+    E.reshuffle(session);
+    view = session.rounds.length - 1;
+    resetTimer(); render();
+    toast("Round " + (view + 1) + " shuffled.", true);
+  }
+  function shuffleWhyNot() {
+    var st = session.style;
+    if (st === "scramble") return "In Scramble, only the first game of a round can be shuffled (that's when the groups are made).";
+    if (st === "ladder" || st === "challenge") return "Only the first round can be shuffled; after that, results decide who plays where.";
+    return "Shuffle isn't available in " + styleLabel(st) + ": the seeding and results decide who plays where.";
+  }
+
+  // ---------- round timer ----------
+  var timer = { left: 0, end: 0, running: false, iv: null, beeped: false };
+  function resetTimer() {
+    clearInterval(timer.iv); timer.iv = null;
+    var min = session && session.timerMin || 0;
+    if (!min) { timer.left = 0; timer.running = false; drawTimer(); return; }
+    timer.left = min * 60000; timer.end = Date.now() + timer.left; timer.running = true; timer.beeped = false;
+    timer.iv = setInterval(tickTimer, 250);
+    drawTimer();
+  }
+  function toggleTimer() {
+    if (!session || !session.timerMin) { toast("The round timer is off. Set the minutes under Format before starting a session."); return; }
+    if (!timer.running && timer.left <= 0) { resetTimer(); return; }          // time's up: start again
+    if (timer.running) { timer.left = Math.max(0, timer.end - Date.now()); timer.running = false; clearInterval(timer.iv); timer.iv = null; }
+    else { timer.end = Date.now() + timer.left; timer.running = true; timer.iv = setInterval(tickTimer, 250); }
+    drawTimer();
+  }
+  function tickTimer() {
+    if (!timer.running) return;
+    if (timer.end - Date.now() <= 0) {
+      timer.left = 0; timer.running = false; clearInterval(timer.iv); timer.iv = null;
+      if (!timer.beeped) { timer.beeped = true; beep(); }
+    }
+    drawTimer();
+  }
+  function drawTimer() {
+    var el = $("timer");
+    document.querySelectorAll(".timeronly").forEach(function (x) { x.classList.toggle("hidden", !(session && session.timerMin)); });
+    if (!session || !session.timerMin) { el.classList.add("hidden"); return; }
+    el.classList.remove("hidden");
+    var left = timer.running ? Math.max(0, timer.end - Date.now()) : timer.left, secs = Math.ceil(left / 1000);
+    el.textContent = left <= 0 ? "Time!" : Math.floor(secs / 60) + ":" + ("0" + secs % 60).slice(-2) + (timer.running ? "" : " ❚❚");
+    el.classList.toggle("done", left <= 0);
+    el.classList.toggle("paused", !timer.running && left > 0);
+    el.classList.toggle("low", timer.running && left > 0 && left <= 60000);
+  }
+  function beep() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      var ctx = beep.ctx || (beep.ctx = new AC());
+      [0, 0.35, 0.7].forEach(function (t) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "square"; o.frequency.value = 880; g.gain.value = 0.12;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.22);
+      });
+    } catch (e) {}
+  }
+
+  // ---------- one player's games ----------
+  function showPlayer(id) {
+    var u = session.units[id], dbl = session.mode === "doubles", rows = "", g = 0, w = 0;
+    session.rounds.forEach(function (rd, ri) {
+      var played = false;
+      rd.matches.forEach(function (m) {
+        var inA = m.sideA.indexOf(id) >= 0, inB = m.sideB.indexOf(id) >= 0;
+        if (!inA && !inB) return;
+        played = true;
+        var mine = inA ? m.sideA : m.sideB, theirs = inA ? m.sideB : m.sideA;
+        var partner = mine.filter(function (x) { return x !== id; }).map(function (x) { return unitDisplay(session.units[x]); }).join(" & ");
+        var opp = theirs.map(function (x) { return unitDisplay(session.units[x]); }).join(" & ");
+        var wv = E.winnerOf(session, m), res = "–", cls = "";
+        if (wv) {
+          var won = (wv === "a") === inA;
+          res = won ? "Won" : "Lost"; cls = won ? "won" : "lost"; g++; if (won) w++;
+          if (m.walkover) res += " (walkover)";
+          else if (session.scoring && m.score) res += " " + (inA ? m.score.a + "–" + m.score.b : m.score.b + "–" + m.score.a);
+        }
+        rows += "<tr><td>" + (ri + 1) + "</td><td>" + esc(session.courts[m.court] + courtNote(rd, m)) + "</td>" +
+          (dbl ? "<td>" + esc(partner) + "</td>" : "") + "<td>" + esc(opp) + "</td><td class='" + cls + "'>" + res + "</td></tr>";
+      });
+      if (!played && rd.sitting.indexOf(id) >= 0) {
+        var why = rd.queue ? "In the queue" : rd.finished && rd.finished.indexOf(id) >= 0 ? "Finished" : rd.waiting ? "Waiting" : "Sat out";
+        rows += "<tr><td>" + (ri + 1) + "</td><td colspan='" + (dbl ? 4 : 3) + "' class='muted'>" + why + "</td></tr>";
+      }
+    });
+    $("pdTitle").textContent = unitDisplay(u);
+    $("pdSub").textContent = g ? w + " won, " + (g - w) + " lost" : "No results yet.";
+    $("pdBody").innerHTML = "<table><tr><th>Round</th><th>Court</th>" + (dbl ? "<th>With</th>" : "") + "<th>Against</th><th>Result</th></tr>" + rows + "</table>";
+    $("pdView").classList.remove("hidden");
+  }
+  function closePd() { $("pdView").classList.add("hidden"); }
+
+  // ---------- session summary (print or save) ----------
+  function namesOf(ids) { return ids.map(function (x) { return unitDisplay(session.units[x]); }).join(" & "); }
+  function summaryHtml() {
+    var st = session.style, info = E.styleInfo(st), pts = session.scoring;
+    var d = new Date(session.started || Date.now());
+    var h = "<div class='meta'>" + esc((session.schedName ? session.schedName + " · " : "") +
+      d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " · " +
+      MODE_NAME[session.mode] + " · " + styleLabel(st) + " · " + session.rounds.length + " round" + (session.rounds.length === 1 ? "" : "s")) + "</div>";
+    if (session.hasBoard) {
+      h += "<h3>Standings</h3><table class='sumtable'><tr><th>#</th><th>" + (session.mode === "teams" ? "Team" : "Player") + "</th><th>Played</th><th>Won</th><th>Lost</th>" +
+        (info.points ? "<th>Pts</th>" : "") + (pts ? "<th>For</th><th>Agst</th><th>Margin</th>" : "") + "</tr>";
+      var srows = standings();
+      srows.forEach(function (r) {
+        var shared = srows.filter(function (x) { return x.rank === r.rank; }).length > 1;
+        h += "<tr><td>" + (shared ? "=" : "") + r.rank + "</td><td>" + esc(r.name) + "</td><td>" + r.p + "</td><td>" + r.w + "</td><td>" + r.l + "</td>" +
+          (info.points ? "<td>" + r.pts + "</td>" : "") + (pts ? "<td>" + r.pf + "</td><td>" + r.pa + "</td><td>" + (r.m > 0 ? "+" : "") + r.m + "</td>" : "") + "</tr>";
+      });
+      h += "</table>";
+    }
+    h += "<h3>Rounds</h3>";
+    session.rounds.forEach(function (rd, i) {
+      h += "<div class='sumround'><b>Round " + (i + 1) + "</b><br>";
+      rd.matches.forEach(function (m) {
+        var w = E.winnerOf(session, m), A = esc(namesOf(m.sideA)), B = esc(namesOf(m.sideB));
+        h += esc(session.courts[m.court] + courtNote(rd, m)) + ": " + (w === "a" ? "<b>" + A + "</b>" : A) + " v " + (w === "b" ? "<b>" + B + "</b>" : B) +
+          (pts && m.score && m.score.a !== null && m.score.b !== null && !m.walkover ? " (" + m.score.a + "–" + m.score.b + ")" : "") + "<br>";
+      });
+      var sit = rd.waiting || rd.sitting;
+      if (sit.length) h += "<span class='muted'>" + (rd.queue ? "Queue" : rd.waiting ? "Waiting" : "Sitting out") + ": " + esc(namesOf(sit).split(" & ").join(", ")) + "</span>";
+      h += "</div>";
+    });
+    return h;
+  }
+  function openSummary() {
+    if (!session) return;
+    saveResults();
+    $("sumBody").innerHTML = summaryHtml();
+    $("sumView").classList.remove("hidden");
+  }
+  function closeSum() { $("sumView").classList.add("hidden"); }
+  function saveSummary() {
+    var d = new Date(session.started || Date.now());
+    var ymd = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    var css = "body{font-family:'Segoe UI',system-ui,sans-serif;color:#111a22;max-width:900px;margin:24px auto;padding:0 16px}" +
+      "h1{font-size:24px}h3{margin:18px 0 6px}.meta,.muted{color:#56636f;font-size:14px}table{border-collapse:collapse;width:100%;font-size:15px}" +
+      "th,td{padding:6px 8px;border-bottom:1px solid #c9d2da;text-align:left}th{color:#56636f;font-size:12px;text-transform:uppercase}" +
+      ".sumround{margin:8px 0;font-size:14px;line-height:1.5}.sumround b{color:#3f5c00}";
+    var html = "<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Fair Dinkum summary " + ymd + "</title><style>" + css +
+      "</style></head><body><h1>Fair Dinkum: session summary</h1>" + summaryHtml() + "</body></html>";
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    a.download = "Fair Dinkum summary " + ymd + ".html";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    toast("Summary saved to your Downloads folder.", true);
+  }
+  function printSummary() {
+    document.body.classList.add("printing");
+    window.print();
+    setTimeout(function () { document.body.classList.remove("printing"); }, 500);
+  }
+
   function prev() { if (view > 0) { view--; render(); } }
 
   // ---------- mid-session player editing ----------
@@ -2684,6 +3837,8 @@
     $("editTitle").textContent = session.mode === "teams" ? "Teams in this session" : "Players in this session";
     $("addName").placeholder = session.mode === "teams" ? "Add a team, e.g. Sam Jones & Alex Reid" : "Add a player";
     $("editErrors").textContent = "";
+    $("addSex").classList.toggle("hidden", !E.styleInfo(session.style).sexes);
+    $("addSex").value = "";
     renderEditList();
     $("editOverlay").classList.remove("hidden");
     $("addName").value = ""; $("addName").focus();
@@ -2714,6 +3869,21 @@
       if (parts.length !== 2 || !parts[0] || !parts[1]) err = "Enter two names separated by &.";
       else unit = { name: parts[0] + " & " + parts[1], members: parts };
     } else unit = { name: v };
+    var info = E.styleInfo(session.style);
+    if (!err && info.bracket) err = "New players can't join a knockout once it has started.";
+    if (!err && unit) {
+      if (session.mode === "teams") {
+        unit.pids = unit.members.map(function (n) { var p = findPlayerByName(n); return p ? p.id : null; }).filter(Boolean);
+      } else {
+        var dp = findPlayerByName(unit.name);
+        unit.pids = dp ? [dp.id] : [];
+        if (info.sexes) {
+          unit.sex = $("addSex").value || (dp && dp.sex) || "";
+          if (!unit.sex) err = "Choose Man or Woman for " + unit.name + " (next to the Add button).";
+          else if (dp && !dp.sex && canEdit()) { dp.sex = unit.sex; saveDb(); }
+        }
+      }
+    }
     if (!err) {
       var existing = session.order.map(function (id) { return session.units[id].name.toLowerCase(); })
         .concat(pending.adds.map(function (a) { return a.name.toLowerCase(); }));
@@ -2736,22 +3906,58 @@
     }
     var changed = pending.adds.some(function (a) { return a.keep; }) ||
       Object.keys(pending.toggles).some(function (id) { return pending.toggles[id] !== session.units[id].active; });
-    var endsLadder = session.ladder && changed;
-    if (endsLadder) {
-      if (!confirm("Changing players ends the ladder. From the next round, the normal rotation is used. Continue?")) return;
-      session.ladder = false;
+    var st = session.style, info = E.styleInfo(st);
+    if (info.bracket) {
+      var back = Object.keys(pending.toggles).filter(function (id) { return pending.toggles[id] && !session.units[id].active; });
+      if (back.length) { $("editErrors").textContent = "Players who have left a knockout can't rejoin it."; return; }
+      var leaving = Object.keys(pending.toggles).filter(function (id) { return !pending.toggles[id] && session.units[id].active; });
+      if (leaving.length && !confirm(leaving.map(function (id) { return session.units[id].name; }).join(", ") +
+        (leaving.length === 1 ? " will lose their" : " will lose their") + " remaining knockout games by walkover. Continue?")) return;
+    }
+    var endsStyle = !!info.exact && changed;
+    if (endsStyle) {
+      if (!confirm("Changing players ends " + styleLabel(st) + ". From the next round, the normal rotation is used. Continue?")) return;
+      session.style = "rotation";
     }
     Object.keys(pending.toggles).forEach(function (id) {
       if (pending.toggles[id]) E.restoreUnit(session, id); else E.removeUnit(session, id);
     });
-    pending.adds.forEach(function (a) { if (a.keep) E.addUnit(session, { name: a.name, members: a.members }); });
+    pending.adds.forEach(function (a) {
+      if (!a.keep) return;
+      var nid = E.addUnit(session, { name: a.name, members: a.members }), u = session.units[nid];
+      u.sex = a.sex || ""; u.pids = a.pids || [];
+      var rt = ratingOfPids(u.pids); if (rt !== null) u.rating = rt;
+    });
+    if (changed) E.playersChanged(session);
     computeDisplayNames(session);
     closeEdit();
-    toast(endsLadder ? "Ladder ended. The normal rotation starts with the next new round." : "Player changes apply from the next new round.", true);
+    toast(endsStyle ? styleLabel(st) + " ended. The normal rotation starts with the next new round." :
+      info.blocks && changed ? "Player changes apply from the next round, with new groups." : "Player changes apply from the next new round.", true);
   }
   function closeEdit() { $("editOverlay").classList.add("hidden"); pending = null; }
 
   function inScoreBox() { return document.activeElement && document.activeElement.classList.contains("score"); }
+
+  // ---------- help ----------
+  var HELP_HTML = "<p>Fair Dinkum organises recreational play: who plays where, with whom, and who sits out. Pick a <b>Format<\/b> (Doubles, Singles or Teams), a <b>Play style<\/b>, the courts and the players, then press <b>Start session<\/b>.<\/p>\n<div class=\"toc\">\n  <a href=\"#h-start\">Getting started<\/a><a href=\"#h-keys\">Keys and buttons<\/a><a href=\"#h-styles\">Play styles<\/a>\n  <a href=\"#h-rotation\">Rotation<\/a><a href=\"#h-seeded\">Seeded<\/a><a href=\"#h-mixed\">Mixed doubles<\/a><a href=\"#h-combo\">Combo<\/a>\n  <a href=\"#h-scramble\">Scramble<\/a><a href=\"#h-ladder\">Ladder<\/a><a href=\"#h-throne\">Claim the Throne<\/a><a href=\"#h-river\">Up &amp; Down the River<\/a>\n  <a href=\"#h-cream\">Cream of the Crop<\/a><a href=\"#h-challenge\">Challenge court<\/a><a href=\"#h-compass\">Compass draw<\/a><a href=\"#h-double\">Double elimination<\/a>\n  <a href=\"#h-results\">Scores and winners<\/a><a href=\"#h-board\">Leaderboard and summary<\/a><a href=\"#h-shuffle\">Shuffle<\/a><a href=\"#h-timer\">Round timer<\/a>\n  <a href=\"#h-past\">Past results<\/a><a href=\"#h-changes\">Changing players<\/a><a href=\"#h-data\">Your data<\/a>\n<\/div>\n\n<h3 id=\"h-start\">Getting started<\/h3>\n<ul>\n  <li><b>Format:<\/b> Doubles (partners change), Singles (1 v 1) or Teams (fixed pairs you make under <i>Pairs<\/i>).<\/li>\n  <li><b>Courts:<\/b> how many, and their names. In styles with a <b>top court<\/b> (Seeded, Ladder, Claim the Throne, River, Cream), the first court in the list is the top court.<\/li>\n  <li><b>Who's playing:<\/b> tick players (or a group), or type a name to add someone. <b>Players &amp; groups\u2026<\/b> manages the full list.<\/li>\n  <li><b>Scheduled sessions:<\/b> set up a session in advance with <b>+ Schedule a session<\/b>, then <b>Launch<\/b> it on the day.<\/li>\n<\/ul>\n\n<h3 id=\"h-keys\">Keys and buttons during a session<\/h3>\n<ul>\n  <li><b>Space<\/b> next round \u00b7 <b>Backspace<\/b> previous round \u00b7 <b>E<\/b> add or remove players \u00b7 <b>S<\/b> shuffle this round \u00b7 <b>T<\/b> pause or restart the timer \u00b7 <b>F1<\/b> or <b>L<\/b> leaderboard \u00b7 <b>H<\/b> this help \u00b7 <b>Esc<\/b> back to setup (the session is kept; <b>Resume<\/b> to carry on).<\/li>\n  <li>On a phone or tablet, turn on <b>On-screen buttons<\/b> for Back, Next, Players, Shuffle, Leaderboard and End.<\/li>\n<\/ul>\n\n<h3 id=\"h-styles\">Play styles<\/h3>\n<p>Some styles only work with some formats; the list shows the ones that fit. Styles marked <i>results<\/i> need a winner for every game before the next round: enter scores (with <b>Keep score<\/b>) or tap the winning side. The rules below are Fair Dinkum's versions of these formats; where a style has settings, they appear under <b>Play style<\/b>.<\/p>\n\n<h4 id=\"h-rotation\">Rotation (random mix): Doubles, Singles, Teams<\/h4>\n<p>Everyone gets the same number of sit-outs (give or take one), never two in a row where avoidable, and partners and opponents are mixed up as much as possible.<\/p>\n<div class=\"set\">Setting: <b>Balance courts using past results<\/b>: makes the two sides on each court more even, using win rates from earlier sessions.<\/div>\n\n<h4 id=\"h-seeded\">Seeded: all formats \u00b7 results<\/h4>\n<p>Put players in order (1 = strongest). The top group plays on the top court, the next group on the next, and so on. After every round everyone is re-ranked by win rate, then points margin per game (players who haven't played yet count as 50%). Sit-outs stay fair and partners still rotate within each group.<\/p>\n\n<h4 id=\"h-mixed\">Mixed doubles: Doubles<\/h4>\n<p>Every pair is a man and a woman. Set each player as Man or Woman under <b>Men and women<\/b> (it's remembered). If the numbers don't match, spare players fill men's or women's courts; sit-outs are shared fairly among the men and among the women.<\/p>\n\n<h4 id=\"h-combo\">Combo: Doubles<\/h4>\n<p>Rounds alternate: mixed pairs one round, men's and women's doubles the next (as far as the numbers allow).<\/p>\n\n<h4 id=\"h-scramble\">Scramble: Doubles<\/h4>\n<p>Players are put in groups of 4 per court and stay together for a <b>round of games<\/b>, playing with each partner in turn (3 games = everyone partners everyone on that court once). Then new groups are made, keeping apart people who've already played together.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3). <b>Courts of 5<\/b> (default on): spare players join a court as a fifth, and one person rests each game, instead of sitting out the whole round.<\/div>\n\n<h4 id=\"h-ladder\">Ladder (King of the court): Doubles \u00b7 results<\/h4>\n<p>Everyone plays every round, so you need a multiple of 4 players and enough courts. Round 1 is random. After that, winners move up a court and losers move down; the two who arrive on a court together are split up and play against each other. Top-court winners and bottom-court losers stay put.<\/p>\n\n<h4 id=\"h-throne\">Claim the Throne: Doubles \u00b7 results<\/h4>\n<p>A ladder (as above) that starts from your seeding: the top four on the top court, playing 1 &amp; 4 v 2 &amp; 3, and so on down. Each win earns points: on 3 courts, a win is worth 3 on the top court, 2 on the middle and 1 on the bottom. Ranked by points, then win rate, then points margin per game.<\/p>\n\n<h4 id=\"h-river\">Up &amp; Down the River: Doubles \u00b7 results<\/h4>\n<p>Seeded groups of 4 play a round of games on their court (each partnership once). Then the best player in each group (most wins, then points margin) moves up a court and the worst moves down. Points as in Claim the Throne.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3), <b>courts of 5<\/b> (default on), and <b>players moving<\/b> each way (1 or 2; default 1).<\/div>\n\n<h4 id=\"h-cream\">Cream of the Crop: Doubles \u00b7 results<\/h4>\n<p>Round 1 groups each get a mix of strong and weaker players (from your seeding). After round 1, everyone is sorted onto courts by results: the best four on the top court, and so on. From then on, the top two in each group move up a court and the bottom two move down. Points as in Claim the Throne.<\/p>\n<div class=\"set\">Settings: <b>Games per round<\/b> (default 3) and <b>courts of 5<\/b>.<\/div>\n\n<h4 id=\"h-challenge\">Challenge court: Doubles, Singles, Teams \u00b7 results<\/h4>\n<p>Like a paddle stack. Round 1 is a random draw and everyone else joins the queue (shown as <b>Next up<\/b>). Winners stay on; losers go to the back of the queue and the next in the queue come on to challenge. In doubles, the next two in the queue play as partners. After a set number of wins in a row, the winners come off too (behind the losers in the queue).<\/p>\n<div class=\"set\">Setting: <b>Winners come off after<\/b> 3 wins in a row (0 = winners can stay on for ever).<\/div>\n\n<h4 id=\"h-compass\">Knockout: Compass draw: Singles, Teams \u00b7 results<\/h4>\n<p>Put the entrants in draw order (1 = top seed); top seeds are kept apart. Any number can enter: the draw is filled up with byes, which go to the top seeds. Winners carry on in the East draw; first-round losers start the West draw, and each later round's losers start a new draw (North, South, Northeast\u2026). Everyone plays every round and every finishing place is decided.<\/p>\n\n<h4 id=\"h-double\">Knockout: Double elimination: Singles, Teams \u00b7 results<\/h4>\n<p>Two defeats and you're out. Losers in the winners' bracket drop into the losers' bracket. The two bracket winners meet in the grand final. Byes as in the Compass draw.<\/p>\n<div class=\"set\">Setting: <b>Decider<\/b> (default on): if the losers' bracket winner wins the grand final, both have lost once, so a deciding final is played.<\/div>\n<p>In both knockouts, games are put on courts as soon as both players are known, earliest rounds first; anyone without a game that round shows under <b>Waiting<\/b>.<\/p>\n\n<h3 id=\"h-results\">Scores and winners<\/h3>\n<ul>\n  <li><b>Keep score<\/b>: type each court's score (Enter moves to the next box). Ties aren't allowed. The next round won't start until every court has a score.<\/li>\n  <li>Styles that need results but aren't scored: <b>tap the winning side<\/b> on each court (tap again to undo).<\/li>\n  <li>In styles where results decide the next round (Ladder, Throne, River, Cream, Challenge, knockouts), only the latest round's results can be changed.<\/li>\n<\/ul>\n\n<h3 id=\"h-board\">Leaderboard and session summary<\/h3>\n<ul>\n  <li><b>F1<\/b> or <b>L<\/b> shows the leaderboard (when there are scores or winners). Each style ranks its own way; the rule is shown at the top.<\/li>\n  <li>Click (or tap) a name to see all their games: round, court, partner, opponents and result.<\/li>\n  <li><b>Session summary<\/b> (on the leaderboard, or <b>Summary<\/b> on the setup screen) lists the standings and every round. <b>Print<\/b> it, or <b>Save as file<\/b> to keep a copy.<\/li>\n<\/ul>\n\n<h3 id=\"h-shuffle\">Shuffle<\/h3>\n<p><b>S<\/b> (or the Shuffle button) redraws the latest round, for when people don't like the draw. It's available in Rotation, Seeded, Mixed and Combo; in Scramble on the first game of a round; and in Ladder and Challenge court for round 1 only. In the other styles the seeding and results decide who plays where.<\/p>\n\n<h3 id=\"h-timer\">Round timer<\/h3>\n<p>Set <b>Round timer<\/b> to a number of minutes (0 = off). A countdown shows during the session and restarts with each new round. Click it (or press <b>T<\/b>) to pause or carry on. At zero it flashes <b>Time!<\/b> and beeps.<\/p>\n\n<h3 id=\"h-past\">Past results<\/h3>\n<p>Results from sessions with scores or tapped winners are stored with each player (games, wins and points margin). They're used for <b>Balance courts using past results<\/b> and the <b>Order by past results<\/b> button on seeding lists, and shown on the Players &amp; groups screen. Guests' results aren't kept. <b>Clear past results\u2026<\/b> on Players &amp; groups removes them all.<\/p>\n\n<h3 id=\"h-changes\">Changing players during a session<\/h3>\n<ul>\n  <li>Press <b>E<\/b> (or Players) to tick off people who've left and add late arrivals. Changes apply from the next new round.<\/li>\n  <li>Ladder and Claim the Throne need everyone playing, so changing players ends them and switches to Rotation.<\/li>\n  <li>Scramble, River and Cream start new groups at the next round.<\/li>\n  <li>Knockouts: nobody new can join; a player who leaves loses their remaining games by walkover.<\/li>\n  <li>Mixed and Combo: say whether a new player is a man or a woman.<\/li>\n<\/ul>\n\n<h3 id=\"h-data\">Your data<\/h3>\n<p>Players, groups, scheduled sessions and past results are kept on this device: in the database folder you choose (with automatic backups), and in the browser. Nothing is sent anywhere. Kiosk mode uses a copy of the player list and forgets changes when it restarts.<\/p>\n";
+  function openHelp(topic) {
+    var body = $("helpBody");
+    if (!body.dataset.done) {
+      body.innerHTML = HELP_HTML; body.dataset.done = "1";
+      body.querySelectorAll(".toc a").forEach(function (a) {
+        a.addEventListener("click", function (e) { e.preventDefault(); jumpHelp(a.getAttribute("href").slice(3)); });
+      });
+    }
+    $("helpView").classList.remove("hidden");
+    if (topic) jumpHelp(topic); else body.scrollTop = 0;
+  }
+  function jumpHelp(topic) {
+    var t = document.getElementById("h-" + topic), body = $("helpBody");
+    if (!t) return;
+    body.scrollTop = t.offsetTop - body.offsetTop - 8;
+    t.classList.add("flash"); setTimeout(function () { t.classList.remove("flash"); }, 1600);
+  }
+  function closeHelp() { $("helpView").classList.add("hidden"); }
 
   // ---------- touch devices: on-screen buttons instead of keys ----------
   var TOUCH_KEY = KP ? KP + "touchButtons" : "fairDinkum.touchButtons";
@@ -2770,6 +3976,12 @@
 
   // ---------- keyboard ----------
   document.addEventListener("keydown", function (e) {
+    if (!$("helpView").classList.contains("hidden")) {
+      if (e.key === "Escape" || e.key === "h" || e.key === "H" || e.key === "?") { e.preventDefault(); closeHelp(); }
+      return;
+    }
+    if (!$("pdView").classList.contains("hidden")) { if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); closePd(); } return; }
+    if (!$("sumView").classList.contains("hidden")) { if (e.key === "Escape") { e.preventDefault(); closeSum(); } return; }
     if (!$("editOverlay").classList.contains("hidden")) {
       if (e.key === "Escape") { e.preventDefault(); closeEdit(); }
       else if (e.key === "Enter" && document.activeElement === $("addName")) { e.preventDefault(); addPending(); }
@@ -2805,6 +4017,9 @@
     else if (e.key === "Backspace") { e.preventDefault(); if (!e.repeat) prev(); }
     else if (e.key === "Escape") { e.preventDefault(); leaveRun(); }
     else if (e.key === "e" || e.key === "E") { e.preventDefault(); openEdit(); }
+    else if (e.key === "s" || e.key === "S") { e.preventDefault(); shuffleRound(); }
+    else if (e.key === "t" || e.key === "T") { e.preventDefault(); toggleTimer(); }
+    else if (e.key === "h" || e.key === "H" || e.key === "?") { e.preventDefault(); openHelp(); }
   });
 
   // ---------- wiring ----------
@@ -2881,8 +4096,20 @@
   $("ebCancel").addEventListener("click", endEdit);
   $("finishBtn").addEventListener("click", finishSession);
   $("keepScore").addEventListener("change", function (e) { settings.keepScore = e.target.checked; persist(); renderPicker(); });
-  $("seeded").addEventListener("change", function (e) { settings.seeded = e.target.checked; if (e.target.checked) settings.ladder = false; persist(); renderPicker(); });
-  $("ladder").addEventListener("change", function (e) { settings.ladder = e.target.checked; if (e.target.checked) settings.seeded = false; persist(); renderPicker(); });
+  $("styleSel").addEventListener("change", function (e) { settings.style = e.target.value; persist(); renderPicker(); });
+  $("balance").addEventListener("change", function (e) { settings.balance = e.target.checked; persist(); });
+  $("timerMin").addEventListener("input", function (e) { var v = parseInt(e.target.value, 10); settings.timer = isFinite(v) ? Math.max(0, Math.min(90, v)) : 0; persist(); });
+  $("timerMin").addEventListener("change", function (e) { e.target.value = settings.timer || 0; });
+  $("styleHelp").addEventListener("click", function () { openHelp(curStyle()); });
+  $("helpBtn").addEventListener("click", function () { openHelp(); });
+  $("seedRandom").addEventListener("click", seedRandom);
+  $("seedRated").addEventListener("click", seedRated);
+  $("clearResults").addEventListener("click", function () {
+    if (!canEdit()) return;
+    if (!(db.results || []).length) { toast("There are no past results stored."); return; }
+    if (!confirm("Clear the past results stored for every player? They're used for “Balance courts” and “Order by past results”.")) return;
+    db.results = []; saveDb(); renderManage(); toast("Past results cleared.", true);
+  });
   $("touchBtns").addEventListener("change", function (e) {
     try { localStorage.setItem(TOUCH_KEY, e.target.checked ? "1" : "0"); } catch (x) {}
     applyTouch(e.target.checked);
@@ -2894,6 +4121,15 @@
   $("tbBoard").addEventListener("click", openBoard);
   $("tbBoardClose").addEventListener("click", closeBoard);
   $("tbEnd").addEventListener("click", leaveRun);
+  $("tbShuffle").addEventListener("click", shuffleRound);
+  $("timer").addEventListener("click", toggleTimer);
+  $("boardSummary").addEventListener("click", openSummary);
+  $("sumBtn").addEventListener("click", openSummary);
+  $("sumClose").addEventListener("click", closeSum);
+  $("sumSave").addEventListener("click", saveSummary);
+  $("sumPrint").addEventListener("click", printSummary);
+  $("pdClose").addEventListener("click", closePd);
+  $("helpClose").addEventListener("click", closeHelp);
   $("resumeBtn").addEventListener("click", function () { view = session.rounds.length - 1; enterRun(); });
   $("addBtn").addEventListener("click", addPending);
   $("editApply").addEventListener("click", applyEdit);
@@ -2926,12 +4162,16 @@
     try {
       if (txt) {
         var s = JSON.parse(txt);
-        if (s && s.players) settings = Object.assign(settings, s);
+        if (s && s.players) {
+          settings = Object.assign(settings, s);
+          if (!s.style) settings.style = s.ladder ? "ladder" : s.seeded ? "seeded" : "rotation";
+          settings.opt = normOpt(settings.opt);
+          delete settings.seeded; delete settings.ladder;
+        }
       }
     } catch (e) {}
     $("courtCount").value = settings.courtCount;
     $("keepScore").checked = !!settings.keepScore;
-    $("seeded").checked = !!settings.seeded;
     loadSel();
     return initDb();
   }).then(function () {
